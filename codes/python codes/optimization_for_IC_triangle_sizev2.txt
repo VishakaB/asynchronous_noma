@@ -1,0 +1,30 @@
+#optimization for determining the IC triangle size
+#ref: https://www.cvxpy.org/examples/basic/linear_program.html
+# Import packages.
+import cvxpy as cp
+import numpy as np
+import math 
+
+e_sym = 2;
+L = 10;
+N= 6;
+e_sym=0.5;
+
+# Generate a random non-trivial linear program.
+np.random.seed(1)
+
+# Define and solve the CVXPY problem.
+n_sym = cp.Variable(1)
+e_sic = cp.Variable(1)
+
+prob = cp.Problem(cp.Maximize(n_sym),
+                 [e_sic <= 10,
+                  2 <= n_sym, n_sym <= 6,
+                  e_sic == N*(N+L-2)*math.factorial(N)*e_sym])
+
+prob.solve()
+
+# Print result.
+print("\nThe optimal value is", prob.value)
+print("A solution x is",n_sym.value)
+print("A dual solution is",prob.constraints[0].dual_value)
