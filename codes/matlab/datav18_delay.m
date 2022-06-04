@@ -87,7 +87,7 @@ for indx = 1:1:mpriority
     
     initialK = K;
     [x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx)] = seqsic(initialK,alldatadecoded,K,...
-        pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot);
+        pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
     e
     f
     
@@ -99,7 +99,7 @@ save z.mat;
 save zz.mat;
 
 function [a,b,c,d,e,f] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
-g_vec,max_tx_power,timeslot)
+g_vec,max_tx_power,timeslot,N,h_vec)
 
 for nbusers = initialK: initialK%number of superimposed data loop
 for i = 1:100 %random iterations 
@@ -250,14 +250,31 @@ for l = 1: opt_decision_uk'*K_vec
 end
 proptend(v) = toc(proptstart(v));
 
+random_iterations = 10;
+N=10^4;  
+
+userdata_vec = rand(initialK,N)>0.5;          % Generation of data for user1
+clear K_vec;
+for k = 1:K
+    K_vec(k,1) = length(opt_decision_uk)-(k-1);
+end
+%% sim delay
+if(K>1)
+    [sim_delay_prop(v)] = sim_delayfunc(K, h_vec(1:K,:), userdata_vec(1:K,:), random_iterations,K_vec);
+end
+if(K>1)
+    [sim_delay_conv(v)] = sim_delayfunc(initialK, h_vec(1:initialK,:), userdata_vec, random_iterations,initialK_vec);
+end
+
 if K<=1 
-    alldatadecoded=true;
-    proptend(v) = toc(proptstart(v));
-    %+pastdelay;
-    disp('break');
+alldatadecoded=true;
+proptend(v) = toc(proptstart(v));
+disp('break');
     %break;
 else
-    proptend(v) = toc(proptstart(v));
+    %sim_delay_prop(v) = sim_delay_prop(v);
+    %+0.014;
+    %proptend(v) = toc(proptstart(v));
     %tStart(v) = tStart(v)+perioddelay; 
    
 end%end if 
@@ -316,8 +333,8 @@ avgenergy_effconv(i) = abs(mean(energy_eff_conv));
 avgcomplexity_prop(i) = mean(sic_complextiyprop);
 avgcomplexity_conv(i) = mean(sic_complextiyconv);
 
-avgdelay_prop(i) = mean(proptend);
-avgdelay_conv(i) = mean(convtend);
+avgdelay_prop(i) = mean(sim_delay_prop);
+avgdelay_conv(i) = mean(sim_delay_conv);
 end
 a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
@@ -333,4 +350,42 @@ fprintf("avg energy eff proposed %f\n",mean(energy_eff));
 fprintf("avg energy eff conv %f\n",mean(energy_eff_conv));
 fprintf("complexity conv %f\n",mean(sic_complextiyconv));
 fprintf("complexity prop %f\n",mean(sic_complextiyprop));
+end
+function [sim_delay] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations, K_vec)
+
+for i = 1: random_iterations%random iterations
+proptstart(i) = tic; 
+
+%superimposed data
+super_signal = h_vec.*userdata_vec;
+
+%AWGN noise 
+noise= 1/sqrt(2)*[randn(K,length(super_signal)) + j*randn(K,length(super_signal))];
+
+%received signal 
+y = super_signal + noise; %Addition of Noise
+
+%equalization 
+eq_vec = y./h_vec;
+
+est_sym = zeros(3,3);
+
+for k = 1:size(eq_vec,1)
+    K_vec(k,1) = size(eq_vec,1)-(k-1);
+end
+
+%sic decoding for each user symbol 
+for nbsym = 1:size(eq_vec,1)
+    if nbsym ==1
+        est_sym(nbsym,:) = eq_vec(K_vec(nbsym),1:size(est_sym,1))>0;
+    else
+        sub_vec = sum(eq_vec(K_vec(1:nbsym),:),1:size(est_sym,1)) - ...
+            sum(est_sym(1:nbsym-1,:),1:size(est_sym,1));
+        est_sym(nbsym,:) = sub_vec>0;
+    end
+end
+
+propend(i) = toc(proptstart(i));
+end
+sim_delay = mean(propend);
 end

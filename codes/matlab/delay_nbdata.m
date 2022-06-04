@@ -4,7 +4,7 @@ clear all;
 
 %initialization
 k1=5; %Rician factor %ref: https://www.researchgate.net/publication/263669548_Probability_Distribution_of_Rician_K-Factor_in_Urban_Suburban_and_Rural_Areas_Using_Real-World_Captured_Data
-mean=sqrt(k1/(k1+1));% mean
+mean1=sqrt(k1/(k1+1));% mean
 sigma=sqrt(1/(2*(k1+1)));%variance
 N=3;  % Number of Bits for data_user1
 d1 = 0.8; d2 = 500;    %Distances of users from base station (BS)
@@ -14,7 +14,7 @@ n = 3;
 
 % Number of Bits
  
-
+random_iterations=3;
 communication_radius = 30;%change this 
 max_dist     = 100;%meters
 max_eta      = 15;
@@ -71,18 +71,17 @@ end
 
 total_sym = sum(K_vec);
 est_sym = zeros(total_sym,1)
-%% ------------------Hop 1------------------------------
 
-%------------------Generation of Walsh code--------------------------------                               %Number of  Data Sub-Carriers
-   
 userdata_vec = rand(K,N)>0.5;          % Generation of data for user1
 
 moddata_vec = 2.*userdata_vec(:,:)-1;    % BPSK modulation 0 -> -1; 1 -> 0 
 
+[sim_delay0] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations,K_vec)
 
-%function [sim_delay] = sim_delay(K, h_vec, userdata_vec, total_sym)
-for i = 1: 3%random iterations
-tic;
+function [sim_delay] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations,K_vec)
+
+for i = 1: random_iterations%random iterations
+proptstart(i) = tic; 
 
 %superimposed data
 super_signal = userdata_vec.*h_vec;
@@ -98,7 +97,7 @@ y = super_signal + noise'; %Addition of Noise
 %equalization 
 eq_vec = y./h_vec;
 
-rem_sym_vec = zeros(6,1);
+
 est_sym = zeros(3,3);
 
 %sic decoding for each user symbol 
@@ -112,5 +111,7 @@ for nbsym = 1:length(K_vec)
     end
 end
 
-toc
+propend(i) = toc(proptstart(i));
+end
+sim_delay = mean(propend);
 end
