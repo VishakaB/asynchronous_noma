@@ -22,6 +22,7 @@ z = zeros(mpriority,1);
 zz = zeros(mpriority,1);
 e = zeros(mpriority,1);
 f = zeros(mpriority,1);
+g = zeros(mpriority,1);
 %% 
 % Number of Bits
 N=10^4;  
@@ -86,11 +87,11 @@ for indx = 1:1:mpriority
     fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
     
     initialK = K;
-    [x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx)] = seqsic(initialK,alldatadecoded,K,...
+    [x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx)] = seqsic(initialK,alldatadecoded,K,...
         pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
     e
     f
-    
+    g
 end
 
 save x.mat;
@@ -98,7 +99,7 @@ save y.mat;
 save z.mat;
 save zz.mat;
 
-function [a,b,c,d,e,f] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
+function [a,b,c,d,e,f,g] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,N,h_vec)
 
 for nbusers = initialK: initialK%number of superimposed data loop
@@ -152,7 +153,7 @@ opt_decision_uk = ones(K,1);
 
 for j = 1:3%avoid null decision_uk loop
     tStart(v) = tic;%complexity analysis
-
+proptstart(v) = tic; 
 for m = 1:nbiter%lambda converge until loop
    
 decision_uk = ones(K,1);%initialize uk
@@ -242,13 +243,9 @@ end%end null uk
 K = K-sum(opt_decision_uk);%update K
 
 %complexity analysis
-proptstart(v) = tic; 
 
-for l = 1: opt_decision_uk'*K_vec
-   for g = 1:opt_decision_uk'*K_vec
-   end
-end
-proptend(v) = toc(proptstart(v));
+
+%proptend(v) = toc(proptstart(v));
 
 random_iterations = 10;
 N=10^4;  
@@ -335,6 +332,9 @@ avgcomplexity_conv(i) = mean(sic_complextiyconv);
 
 avgdelay_prop(i) = mean(sim_delay_prop);
 avgdelay_conv(i) = mean(sim_delay_conv);
+
+totaldelay_prop(i) = mean(sim_delay_prop+proptend);
+
 end
 a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
@@ -344,6 +344,7 @@ d = mean(sic_complextiyprop);
 
 e = mean(avgdelay_conv);
 f = mean(avgdelay_prop);
+g = mean(totaldelay_prop);
 
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));
