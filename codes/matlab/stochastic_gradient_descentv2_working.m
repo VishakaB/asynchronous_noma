@@ -1,5 +1,5 @@
 startlam = 1.05;
-n_iter   = 30;
+%n_iter   = 30;
 tolerance = 0.1;
 lam = startlam;
 grad_lam = 2*lam;
@@ -10,13 +10,14 @@ learn_rate = 0.1;
     startlam,learn_rate,n_iter,tolerance,K_vec)
 
 function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] = grad_descent_lam(grad_lam,...
-    lam,learn_rate,n_iter,tolerance,K_vec)
+    lam,learn_rate,n_iter,tolerance,K_vec,decision_uk)
+
     convergeduk = false;    
     convergedlam = false;   
     K = 3;
     nbiterationslam = 1;
     nbiterationsuk  = 1;
-    decision_uk = [0.01,0.1,0.1];%initial
+    %decision_uk = [0.1,0.1,0.1];%initial
     %decision_uk = decision_uk>0.8
     while(convergedlam==false)
         grad_uk = -K_vec-lam...

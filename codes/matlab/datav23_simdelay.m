@@ -23,6 +23,7 @@ zz = zeros(mpriority,1);
 e = zeros(mpriority,1);
 f = zeros(mpriority,1);
 g = zeros(mpriority,1);
+h = zeros(mpriority,1);
 %% 
 % Number of Bits
 N=10^4;  
@@ -87,11 +88,14 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 %rng(1);%same random seed
 fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
 
-[x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx)] = seqsic(initialK,alldatadecoded,K,...
+[x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),h(indx)] =...
+    seqsic(initialK,alldatadecoded,K,...
     pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
-e
-f
-g
+    e
+    f
+    h
+    z
+    zz
 end
 
 save x.mat;
@@ -99,7 +103,7 @@ save y.mat;
 save z.mat;
 save zz.mat;
 
-function [a,b,c,d,e,f,g] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
+function [a,b,c,d,e,f,g,h] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,N,h_vec)
 
 sim_delay_prop = 0;
@@ -121,7 +125,6 @@ initialK_vec = K_vec;
 
 miter = 10;
 priority_max = 30;
-
 lambda1 = priority;%change this%energy saving priority %left energy is low
 learn_rate = 0.4;
 tolerance2 = 0.5;%lambda
@@ -155,96 +158,20 @@ pastdelay = 0;
 nbiter = 10;
 noisepower   = 0.1;
 if(K>1)
-opt_decision_uk = ones(K,1);
+opt_decision_uk = 0.1*ones(K,1);
+startlam = 7;
+n_iter   = 30;
+tolerance = 0.5;
+lam = startlam;
+grad_lam = 2*lam;
+%K_vec = [3,2,1];
+learn_rate = 0.1;
 
-for j = 1:3%avoid null decision_uk loop
-    tStart(v) = tic;%complexity analysis
-proptstart(v) = tic; 
-for m = 1:nbiter%lambda converge until loop
-   
-decision_uk = ones(K,1);%initialize uk
+proptstart(v)=tic;
 
-grad_lam = -sum(decision_uk)...
-        +sum(decision_uk.^2);
-diff  = -learn_rate*grad_lam;
-
-    if (abs(diff) <= tolerance)
-        convergedlam  = true;
-        kk=1;
-        cvx_begin quiet
-    
-            variable decision_uk(K,1) binary
-            
-            %objective
-            minimize(-decision_uk'*K_vec)
-
-            %constraints
-            subject to
-   
-            for kk = 1: K-1
-                decision_uk(kk+1,1)<=decision_uk(kk,1)
-            end
-
-            sum(decision_uk)>=1
-            1<= sum(decision_uk)<= K
-            decision_uk.*((noisepower^2 + interf_vec + power_vec(1:K).*mean(g_vec(1:K,:),2))...
-                -power_vec(1:K).*mean(g_vec(1:K,:),2)*(1+1/sinr_th) ) <= 0
-           
-            0.00001*max_tx_power/timeslot <= decision_uk'*sumsym_dur_vec <= ...
-               1/(priority+0.001)*priority_max/timeslot%change interference threshold limits
-           %energy saving priority =lambda1 %if lambda high interference
-           %threshold limit that a device can handle goes low
-        cvx_end
-        
-        %sumsym_dur_vec
-        %disp('1');
-        sumsym_dur_vec;
-        decision_uk>0.5;
-        %fprintf("K decision_uk %i %f\n",K,decision_uk);
-        %fprintf("m i %f %f\n",m,i);
-        if (isnan(decision_uk))
-            %disp('NaN uk');
-            %decision_u= ones(K,1);%re-initialize uk
-            opt_decision_uk = ones(K,1);%previous answer
-            break;
-
-        else
-            %stochastic gradient descent
-            grad_uk = -K_vec-lambda1...
-                            +2*lambda1'*decision_uk;
-            %grad_uk = decision_uk'*K_vec-lambda1...
-               %             +lambda1'*decision_uk;
-            diffuk  = -learn_rate*(1/K)*(grad_uk);
-            %fprintf("abs diff uk %f\n",1/K*abs(mean(diffuk)));
-
-            if (1/K*abs(mean(diffuk)) <= tolerance2)
-                convergeduk  = true;
-                %fprintf("actual decision uk: %f\n",decision_uk);
-                %fprintf("yes converge uk %i\n",m);
-                opt_decision_uk = decision_uk>0.8;
-                break;
-            else
-                decision_uk    = decision_uk + diffuk;
-                if ((decision_uk) <zeros(K,1))
-                     decision_uk = zeros(K,1);
-                end
-            end 
-        end
-    else
-        %disp('lambda')
-        lambda1    = (lambda1 + diff);
-        if (lambda1 <0)
-                 lambda1 = 0;
-        end
-    end 
-    opt_decision_uk = decision_uk>0.8;
-    if (isnan(opt_decision_uk))
-        opt_decision_uk = ones(K,1);
-    end
-end%end lambda converge
-    %opt_decision_uk = decision_uk>0.8;
-    %disp(decision_uk);
-end%end null uk
+[convergedukfin,nbiterationslam,lam,nbiterationsuk,opt_decision_uk] = grad_descent_lam(grad_lam,...
+    lam,learn_rate,n_iter,tolerance,K_vec,opt_decision_uk,K)
+proptend(v)    = toc(proptstart(v));
 
 K = K-sum(opt_decision_uk);%update K
 
@@ -270,7 +197,7 @@ end
 
 if K<=1 
     alldatadecoded = true;
-    proptend(v)    = toc(proptstart(v))*0.1;
+    %proptend(v)    = toc(proptstart(v));
     disp('break');
     nbiterations  = nbiterations+1;
     iterations(v) = nbiterations;
@@ -294,7 +221,6 @@ throughput_vec = log(1+SINR_k);
 
 total_throughput = sum(throughput_vec);
 total_throughput = 2;%fix here????
-
 %% energy efficiency 
 %proposed optimal sic
 for k = 1:length(opt_decision_uk)
@@ -324,8 +250,9 @@ convtend(v) = toc(convtstart(v));
 %% complexity analysis 
 
 %only sic decoding 
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.01);
+
 sic_complextiyconv(v) = sum(initialK)^2;
+sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/tolerance)*log(1/tolerance);
 
 v = v+1;
 end%end while
@@ -336,27 +263,30 @@ avgenergy_effconv(i) = abs(mean(energy_eff_conv));
 avgcomplexity_prop(i) = mean(sic_complextiyprop);
 avgcomplexity_conv(i) = mean(sic_complextiyconv);
 
-avgdelay_prop(i) = mean(sim_delay_prop);
 avgdelay_conv(i) = mean(sim_delay_conv);
-avgiterations = mean(iterations);
+avgdelay_prop(i) = mean(sim_delay_prop);
+%avgiterations = mean(propend);
 totaldelay_prop(i) = mean(sim_delay_prop+iterations*0.01);
-
+avggradientdelay(i) = mean(proptend)
 end
 a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
 
 c = mean(sic_complextiyconv);
-d = mean(sic_complextiyprop);
+d = mean(avgcomplexity_prop);
 
 e = mean(avgdelay_conv);
 f = mean(avgdelay_prop);
+
 g = mean(totaldelay_prop);
+h = mean(avggradientdelay);
 
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));
 fprintf("avg energy eff conv %f\n",mean(energy_eff_conv));
 fprintf("complexity conv %f\n",mean(sic_complextiyconv));
 fprintf("complexity prop %f\n",mean(sic_complextiyprop));
+
 end
 
 function [sim_delay] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations, K_vec)
@@ -396,4 +326,64 @@ end
 propend(i) = toc(proptstart(i));
 end
 sim_delay  = mean(propend);
+end
+
+function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] = grad_descent_lam(grad_lam,...
+    lam,learn_rate,n_iter,tolerance,K_vec,decision_uk,K)
+    if K>5
+        startlam = 1.15;
+    else 
+        startlam = 0.9;  
+    end
+    
+    convergeduk = false;    
+    convergedlam = false;   
+    nbiterationslam = 1;
+    nbiterationsuk  = 1;
+    %decision_uk = [0.1,0.1,0.1];%initial
+    %decision_uk = decision_uk>0.8
+    while(convergedlam==false)
+        grad_uk = -K_vec-lam...
+                            + 2*lam'*decision_uk;
+                        
+        %fprintf('0 grad_uk %f\n',grad_uk)                
+        diffuk  = -learn_rate*(grad_uk);
+        %fprintf('1 diffuk %f\n',diffuk)     
+        
+        if (abs(diffuk)<= tolerance)
+            convergeduk = true;
+            nbiterationsuk = nbiterationsuk+1;
+            
+            while(convergeduk == true)
+                grad_lam = -sum(decision_uk)...
+                + sum(decision_uk.^2);
+                diff = -learn_rate*grad_lam;
+
+                if (abs(diff)<= tolerance)
+                    converged_lam = lam;
+                    nbiterationslam = nbiterationslam+1;
+                    %disp('yea')
+                    convergedlam = true;
+                    convergeduk = false;   
+                    convergedukfin = true;
+                    %fprintf('decision_uk %f\n',decision_uk)
+                    decision_uk =decision_uk>0.8
+                else
+                    converged_lam = 0;
+                    nbiterationslam = nbiterationslam+1;
+                    lam = lam + diff;
+                    %fprintf('lam: %f\n',lam);
+                end               
+            end            
+        else
+            decision_uk    = decision_uk + diffuk;
+            %decision_uk = decision_uk>0.8
+            if ((decision_uk) <zeros(K,1))
+                 decision_uk = zeros(K,1);
+            end
+            nbiterationsuk = nbiterationsuk+1;
+        end
+       
+    end   
+     
 end

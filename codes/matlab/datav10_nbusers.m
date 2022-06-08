@@ -86,8 +86,8 @@ for initialK = 2:20
     K = initialK;
     [x(initialK-1),y(initialK-1),z(initialK-1),zz(initialK-1)] = seqsic(initialK,alldatadecoded,K,...
         pr_vec(6),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot);
-    x
-    y
+    z
+    zz
 end
 
 save x.mat;
@@ -276,7 +276,7 @@ end
 %% complexity analysis 
 
 %only sic decoding 
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.01);
+sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.1)*log(1/0.1);
 sic_complextiyconv(v) = sum(initialK)^2;
 
 v = v+1;
