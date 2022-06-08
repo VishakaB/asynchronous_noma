@@ -145,8 +145,6 @@ diff  = -learn_rate*grad_lam;
            
             0.1*max_tx_power/timeslot <= decision_uk'*sumsym_dur_vec <= ...
                1/(priority+0.001)*priority_max/timeslot%change interference threshold limits
-           %energy saving priority =lambda1 %if lambda high interference
-           %threshold limit that a device can handle goes low
         cvx_end
         
         %sumsym_dur_vec
@@ -160,10 +158,8 @@ diff  = -learn_rate*grad_lam;
             %stochastic gradient descent
             grad_uk = -K_vec-lambda1...
                             +2*lambda1'*decision_uk;
-            %grad_uk = decision_uk'*K_vec-lambda1...
-               %             +lambda1'*decision_uk;
+
             diffuk  = -learn_rate*(1/K)*(grad_uk);
-            %fprintf("abs diff uk %f\n",1/K*abs(mean(diffuk)));
 
             if (1/K*abs(mean(diffuk)) <= tolerance2)
                 convergeduk  = true;

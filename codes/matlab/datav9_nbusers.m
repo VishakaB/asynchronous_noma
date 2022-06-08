@@ -287,6 +287,8 @@ avgenergy_eff(i) = abs(mean(energy_eff));
 avgcomplexity_conv(i) = mean(sic_complextiyconv);
 avgcomplexity_prop(i) = mean(sic_complextiyprop);
 
+avgiterations = mean(iterations);
+
 end
 a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));

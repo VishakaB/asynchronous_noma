@@ -49,7 +49,9 @@ timeslot     = 1;
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
 K = 8;%number of superimposed data
-%%vectors
+for indx = 1:1:mpriority 
+initialK = K;
+
 %Distances of users from rx
 dist_k = max_dist*abs(randn(K,1));
 
@@ -82,16 +84,14 @@ sym_dur_vec = sort(symdur_k,'descend');%change here
 
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
-for indx = 1:1:mpriority 
-    %rng(1);%same random seed
-    fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
-    
-    initialK = K;
-    [x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx)] = seqsic(initialK,alldatadecoded,K,...
-        pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
-    e
-    f
-    g
+%rng(1);%same random seed
+fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
+
+[x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx)] = seqsic(initialK,alldatadecoded,K,...
+    pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
+e
+f
+g
 end
 
 save x.mat;
@@ -102,9 +102,14 @@ save zz.mat;
 function [a,b,c,d,e,f,g] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,N,h_vec)
 
+sim_delay_prop = 0;
+sim_delay_conv = 0;
+nbiterations=1;
+
 for nbusers = initialK: initialK%number of superimposed data loop
 for i = 1:100 %random iterations 
 v =1;
+
 while (alldatadecoded == false) 
 
 %nsymbols vector of each user: K vec #loop
@@ -114,8 +119,8 @@ for k = 1:K
 end
 initialK_vec = K_vec;
 
-miter =10;
-priority_max = 120;
+miter = 10;
+priority_max = 30;
 
 lambda1 = priority;%change this%energy saving priority %left energy is low
 learn_rate = 0.4;
@@ -123,13 +128,14 @@ tolerance2 = 0.5;%lambda
 tolerance = 0.02;%uk
 Rmin = 1e-6;
 sinr_th = 1e-6;
-%--------------------------------------------------------------------------
 
+%--------------------------------------------------------------------------
 %vectors
 interf_vec     = zeros(K,1);
 factorialk_vec = zeros(K,1);
 sumsym_dur_vec = zeros(K,1);
 desired_id   = 1;
+
 for j = 1:K%interference vector loop
 for k =1:K
     %interference vec %only from the next neighbor user
@@ -243,8 +249,6 @@ end%end null uk
 K = K-sum(opt_decision_uk);%update K
 
 %complexity analysis
-
-
 %proptend(v) = toc(proptstart(v));
 
 random_iterations = 10;
@@ -256,6 +260,7 @@ for k = 1:K
     K_vec(k,1) = length(opt_decision_uk)-(k-1);
 end
 %% sim delay
+
 if(K>1)
     [sim_delay_prop(v)] = sim_delayfunc(K, h_vec(1:K,:), userdata_vec(1:K,:), random_iterations,K_vec);
 end
@@ -264,17 +269,18 @@ if(K>1)
 end
 
 if K<=1 
-alldatadecoded=true;
-proptend(v) = toc(proptstart(v));
-disp('break');
-    %break;
+    alldatadecoded = true;
+    proptend(v)    = toc(proptstart(v))*0.1;
+    disp('break');
+    nbiterations  = nbiterations+1;
+    iterations(v) = nbiterations;
 else
-    %sim_delay_prop(v) = sim_delay_prop(v);
-    %+0.014;
-    %proptend(v) = toc(proptstart(v));
-    %tStart(v) = tStart(v)+perioddelay; 
-   
+    nbiterations  = nbiterations+1;
+    iterations(v) = nbiterations;
+    fprintf('nbiterations %i\n',nbiterations);
+    %break;
 end%end if 
+
 end%end if 
 end
 
@@ -297,6 +303,7 @@ end
 total_energ_consump = E_max - E_max^(exp(-log(2)/1000*opt_decision_uk'*K_vec));
 energy_eff(v) = total_throughput/(total_energ_consump +0.01);
 energy_eff;
+
 %%conv sic
 
 total_energ_consump_conv = E_max - E_max^(exp(-log(2)/1000*sum(initialK_vec)));
@@ -320,7 +327,6 @@ convtend(v) = toc(convtstart(v));
 sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.01);
 sic_complextiyconv(v) = sum(initialK)^2;
 
-
 v = v+1;
 end%end while
 
@@ -332,8 +338,8 @@ avgcomplexity_conv(i) = mean(sic_complextiyconv);
 
 avgdelay_prop(i) = mean(sim_delay_prop);
 avgdelay_conv(i) = mean(sim_delay_conv);
-
-totaldelay_prop(i) = mean(sim_delay_prop+proptend);
+avgiterations = mean(iterations);
+totaldelay_prop(i) = mean(sim_delay_prop+iterations*0.01);
 
 end
 a = abs(mean(energy_eff_conv));
@@ -352,6 +358,7 @@ fprintf("avg energy eff conv %f\n",mean(energy_eff_conv));
 fprintf("complexity conv %f\n",mean(sic_complextiyconv));
 fprintf("complexity prop %f\n",mean(sic_complextiyprop));
 end
+
 function [sim_delay] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations, K_vec)
 
 for i = 1: random_iterations%random iterations
@@ -388,5 +395,5 @@ end
 
 propend(i) = toc(proptstart(i));
 end
-sim_delay = mean(propend);
+sim_delay  = mean(propend);
 end

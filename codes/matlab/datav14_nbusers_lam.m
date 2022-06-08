@@ -21,6 +21,7 @@ x = zeros(mpriority,1);
 y = zeros(mpriority,1);
 z = zeros(mpriority,1);
 zz = zeros(mpriority,1);
+e = zeros(mpriority,1);
 %% 
 % Number of Bits
 N=10^4;  
@@ -45,8 +46,8 @@ timeslot     = 1;
 
 %random iterations
 %--------------------------------------------------------------------------
-userK_vec = [3,5,8,15,20];
-K = userK_vec(2);%number of superimposed data
+userK_vec = [3,5,8,12,20];
+K = userK_vec(4);%number of superimposed data
 
 %%vectors
 %Distances of users from rx
@@ -80,17 +81,19 @@ symdur_k = 1*abs(randn(K,1));
 sym_dur_vec = sort(symdur_k,'descend');%change here
 
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
-min_rate_vec = [1e-6,1e-5,1e-4,0.001,0.01,0.05,0.1,0.25,0.5,0.75,1,2,3,4,5,6,7,8,9,10];
+min_rate_vec = [1e-6,1e-5,1e-4,0.001,0.01,0.05,0.1,0.25,0.5,0.75,1,2,3,4,...
+    5,6,7,8,9,10];
 
 for indx = 1:length(min_rate_vec)
     %rng(1);%same random seed
     fprintf("indx pr %i %f\n",indx,pr_vec(indx));
     
     initialK = K;
-    [x(indx),y(indx),z(indx),zz(indx)] = seqsic(initialK,alldatadecoded,K,...
+    [x(indx),y(indx),z(indx),zz(indx),e(indx)] = seqsic(initialK,alldatadecoded,K,...
         pr_vec(4),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,min_rate_vec(indx));
     x
     y
+    e
 end
 
 save x.mat;
@@ -99,7 +102,7 @@ save z.mat;
 save zz.mat;
 
 
-function [a,b,c,d] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
+function [a,b,c,d,e] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,sinr_th)
 
 for nbusers = initialK: initialK%number of superimposed data loop
@@ -246,6 +249,7 @@ if K<=1
     alldatadecoded=true;
     
     disp('break');
+    iterations(v) = m;
     %break;
 end%end if 
 end
@@ -260,7 +264,8 @@ SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 throughput_vec = log(1+SINR_k);
 
 total_throughput = sum(throughput_vec);
-total_throughput = 2;%fix here????
+%fprintf("throughput %f\n",total_throughput);
+%total_throughput = 2;%fix here????
 %% energy efficiency 
 %proposed optimal sic
 for k = 1:length(opt_decision_uk)
@@ -293,12 +298,16 @@ avgenergy_effconv(i) = abs(mean(energy_eff_conv));
 avgcomplexity_prop(i) = mean(sic_complextiyprop);
 avgcomplexity_conv(i) = mean(sic_complextiyconv);
 
+avgiterations = mean(iterations);
+
 end
 a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
 
 c = mean(sic_complextiyconv);
 d = mean(sic_complextiyprop);
+
+e = mean(avgiterations);
 
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));
