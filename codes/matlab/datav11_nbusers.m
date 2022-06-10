@@ -88,8 +88,8 @@ for indx = 1:length(min_rate_vec)
     initialK = K;
     [x(indx),y(indx),z(indx),zz(indx)] = seqsic(initialK,alldatadecoded,K,...
         pr_vec(6),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,min_rate_vec(indx));
-    x
-    y
+    z
+    zz
 end
 
 save x.mat;
@@ -275,7 +275,7 @@ end
 %% complexity analysis 
 
 %only sic decoding 
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.01);
+sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.01)*log(1/0.01);
 sic_complextiyconv(v) = sum(initialK)^2;
 
 v = v+1;
@@ -292,7 +292,7 @@ a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
 
 c = mean(sic_complextiyconv);
-d = mean(sic_complextiyprop);
+d = mean(avgcomplexity_prop);
 
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));

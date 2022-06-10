@@ -276,7 +276,7 @@ end
 %% complexity analysis 
 
 %only sic decoding 
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/0.1)*log(1/0.1);
+sic_complextiyprop(v) = sum(opt_decision_uk)^2*(1/tolerance)*(1/tolerance);
 sic_complextiyconv(v) = sum(initialK)^2;
 
 v = v+1;
@@ -293,7 +293,7 @@ a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
 
 c = mean(sic_complextiyconv);
-d = mean(sic_complextiyprop);
+d = mean(avgcomplexity_prop);
 
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));

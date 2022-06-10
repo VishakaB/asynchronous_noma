@@ -24,6 +24,8 @@ e = zeros(mpriority,1);
 f = zeros(mpriority,1);
 g = zeros(mpriority,1);
 h = zeros(mpriority,1);
+i = zeros(mpriority,1);
+j = zeros(mpriority,1);
 %% 
 % Number of Bits
 N=10^4;  
@@ -49,10 +51,11 @@ timeslot     = 1;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 8;%number of superimposed data
+K = 20;%number of superimposed data
+
 for indx = 1:1:mpriority 
 initialK = K;
-
+%K = indx;
 %Distances of users from rx
 dist_k = max_dist*abs(randn(K,1));
 
@@ -86,16 +89,16 @@ sym_dur_vec = sort(symdur_k,'descend');%change here
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
 %rng(1);%same random seed
-fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
+%fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
 
-[x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),h(indx)] =...
+[x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
+    h(indx),i(indx),j(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
     pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
-    e
-    f
-    h
     z
     zz
+    i
+    j
 end
 
 save x.mat;
@@ -103,7 +106,7 @@ save y.mat;
 save z.mat;
 save zz.mat;
 
-function [a,b,c,d,e,f,g,h] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
+function [a,b,c,d,e,f,g,h,i,j] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,N,h_vec)
 
 sim_delay_prop = 0;
@@ -169,8 +172,12 @@ learn_rate = 0.1;
 
 proptstart(v)=tic;
 
-[convergedukfin,nbiterationslam,lam,nbiterationsuk,opt_decision_uk] = grad_descent_lam(grad_lam,...
-    lam,learn_rate,n_iter,tolerance,K_vec,opt_decision_uk,K)
+[convergedukfin,nbiterationslam,lam,nbiterationsuk,opt_decision_uk] = grad_descent_uklam(grad_lam,...
+    lam,learn_rate,n_iter,tolerance,K_vec,opt_decision_uk,K);
+
+%complexity prop
+sic_complextiyprop(v) = sum(opt_decision_uk)^2*(1/tolerance)*(1/tolerance);
+
 proptend(v)    = toc(proptstart(v));
 
 K = K-sum(opt_decision_uk);%update K
@@ -186,13 +193,14 @@ clear K_vec;
 for k = 1:K
     K_vec(k,1) = length(opt_decision_uk)-(k-1);
 end
+
 %% sim delay
 
 if(K>1)
-    [sim_delay_prop(v)] = sim_delayfunc(K, h_vec(1:K,:), userdata_vec(1:K,:), random_iterations,K_vec);
+    [sim_delay_prop(v),ber_prop(v)] = sim_delayfunc(K, h_vec(1:K,:), userdata_vec(1:K,:), random_iterations,K_vec);
 end
 if(K>1)
-    [sim_delay_conv(v)] = sim_delayfunc(initialK, h_vec(1:initialK,:), userdata_vec, random_iterations,initialK_vec);
+    [sim_delay_conv(v),ber_conv(v)] = sim_delayfunc(initialK, h_vec(1:initialK,:), userdata_vec, random_iterations,initialK_vec);
 end
 
 if K<=1 
@@ -250,13 +258,13 @@ convtend(v) = toc(convtstart(v));
 %% complexity analysis 
 
 %only sic decoding 
-
 sic_complextiyconv(v) = sum(initialK)^2;
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/tolerance)*log(1/tolerance);
 
-v = v+1;
+
+v = v+1;%all user decoding index v
+
 end%end while
-
+%i: random iteration index
 avgenergy_eff(i) = abs(mean(energy_eff));
 avgenergy_effconv(i) = abs(mean(energy_eff_conv));
 
@@ -265,10 +273,16 @@ avgcomplexity_conv(i) = mean(sic_complextiyconv);
 
 avgdelay_conv(i) = mean(sim_delay_conv);
 avgdelay_prop(i) = mean(sim_delay_prop);
+
 %avgiterations = mean(propend);
 totaldelay_prop(i) = mean(sim_delay_prop+iterations*0.01);
-avggradientdelay(i) = mean(proptend)
+avggradientdelay(i) = mean(proptend);
+
+avgberconv(i) = mean(ber_conv);
+avgberprop(i) = mean(ber_prop);
+
 end
+
 a = abs(mean(energy_eff_conv));
 b = abs(mean(energy_eff));
 
@@ -281,6 +295,9 @@ f = mean(avgdelay_prop);
 g = mean(totaldelay_prop);
 h = mean(avggradientdelay);
 
+i = mean(avgberconv);
+j = mean(avgberprop);
+
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));
 fprintf("avg energy eff conv %f\n",mean(energy_eff_conv));
@@ -289,7 +306,7 @@ fprintf("complexity prop %f\n",mean(sic_complextiyprop));
 
 end
 
-function [sim_delay] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations, K_vec)
+function [sim_delay,ber_mean] = sim_delayfunc(K, h_vec, userdata_vec, random_iterations, K_vec)
 
 for i = 1: random_iterations%random iterations
 proptstart(i) = tic; 
@@ -323,12 +340,17 @@ for nbsym = 1:size(eq_vec,1)
     end
 end
 
+%ber analysis
+%compare est symbol with the actual symbol
+ber(i) = abs(mean(mean(est_sym - userdata_vec(:,1:3),2)));
+
 propend(i) = toc(proptstart(i));
 end
 sim_delay  = mean(propend);
+ber_mean = mean(ber);
 end
 
-function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] = grad_descent_lam(grad_lam,...
+function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] = grad_descent_uklam(grad_lam,...
     lam,learn_rate,n_iter,tolerance,K_vec,decision_uk,K)
     if K>5
         startlam = 1.15;
@@ -367,7 +389,7 @@ function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] = grad_
                     convergeduk = false;   
                     convergedukfin = true;
                     %fprintf('decision_uk %f\n',decision_uk)
-                    decision_uk =decision_uk>0.8
+                    decision_uk =decision_uk>0.8;
                 else
                     converged_lam = 0;
                     nbiterationslam = nbiterationslam+1;

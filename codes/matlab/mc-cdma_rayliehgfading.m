@@ -7,6 +7,7 @@ n =4;                               %Number of  Data Sub-Carriers
 walsh=hadamard(n);              
 code1=walsh(2,:);                   %Taking 2nd row of walsh code for User1
 code2=walsh(4,:);                   %Taking 3rd row of walsh code for User2
+
 %------------------Generating data for User1-------------------------------
 N=10^4;                             % Number of Bits for  data_user1
 data_user1= rand(1,N)>0.5;          % Generation of data for user1
@@ -75,12 +76,13 @@ data_noise1=data_channel(:);
 data_noise2=reshape(data_noise1,1,length(data_noise1));
 noise = 1/sqrt(2)*[randn(1,length(data_noise2)) + j*randn(1,length(data_noise2))]; 
 snr = [0:20];                 % multiple Eb/N0 values
+
 for i = 1:length(snr)
+ 
  y = data_noise2 + (sqrt(1)*10^(-snr(i)/20))*noise; %Addition of Noise
  
- 
-%--------------------------Receiver ---------------------------------------
-data_received =y;           %fadded data received with awgn noise
+ %--------------------------Receiver ---------------------------------------
+data_received = y;           %fadded data received with awgn noise
 %---------------------Removing Cyclic Prefix-------------------------------
 rx1=reshape(data_received,(n+3),length(data_received)/(n+3));
 rx12=rx1';
