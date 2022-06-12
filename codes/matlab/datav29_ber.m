@@ -19,6 +19,7 @@ delta_a1_b2 = 0.1;
 %A2->B3
 delta_a2_b3 = 0.2;
 
+power_vec = [p_a,p_b,p_c]
 %delta_mat: rows -> user index, columns-> symbol index %time offset with
 %other users from left to right
 delta_mat = [0,0,0;0.5,0.2,0.4;0.4,0.5,0.8;]
@@ -35,11 +36,11 @@ for j = 1: nsym(i)
 if user_strength(i) == 1 & j == 1%A1
     %interf by B1, s+1
     delta_i = delta_mat(user_strength(i+1),j);%known
-    p_d     = p_a; %desired power
-    p_i     = p_b;%interferes power 
+    p_d     = power_vec(i); %desired power
+    p_i     = power_vec(i+1);%interferes power 
     disp('yea')
-    fun = @(delta_i) (qfunc(sqrt(3*p_a./(2.*(mod_order-1).*...
-    (delta_i.*p_b/2+noise))))).^2;
+    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    (delta_i.*p_i/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
     p_err_sym1 = (1/(timeoff_max -timeoff_min))*q*delta_i;
     p_bita1    = p_err_sym1/log(mod_order)
@@ -48,8 +49,10 @@ elseif (user_strength(i) == 1 & j > 1)%A2.... An
     %interf->B1 and B2 %s-1 and s+1
     delta_i = (1-delta_mat(user_strength(i+1),j-1)) +...
         delta_mat(user_strength(i+1),j);
-    fun = @(delta_i) (qfunc(sqrt(3*p_a./(2.*(mod_order-1).*...
-        (delta_i.*p_b/2+noise))))).^2;
+    p_d     = power_vec(i); %desired power
+    p_i     = power_vec(i+1);%interferes power
+    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (delta_i.*p_i/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
     p_err_sym2 = (1/(timeoff_max -timeoff_min))*q*delta_i;
     p_bita2 = p_err_sym2/log(mod_order) 
@@ -58,8 +61,15 @@ elseif (user_strength(i) > 1 & j == 1 & i~=length(user_strength))%B1
     delta_i = (reverse_delta_mat(user_strength(i-1),j))+...
         (1-reverse_delta_mat(user_strength(i-1),j+1)) +...
         delta_mat(user_strength(i+1),j);
-    fun = @(delta_i) (qfunc(sqrt(3*p_a./(2.*(mod_order-1).*...
-        (delta_i.*p_b/2+noise))))).^2;
+    p_d     = power_vec(i); %desired power
+    p_is    = power_vec(i-1);%interferes power
+    p_iw    = power_vec(i+1);%interferes power
+    %continue here..................
+    %include the delta i into the func expression???????
+    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        ((reverse_delta_mat(user_strength(i-1),j)).*p_is/2 +...
+        (1-reverse_delta_mat(user_strength(i-1),j+1)).*p_is/2 +...
+        delta_mat(user_strength(i+1),j).*p_iw/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
     p_err_sym2 = (1/(timeoff_max -timeoff_min))*q*delta_i;
     p_bita2 = p_err_sym2/log(mod_order) 
@@ -70,8 +80,11 @@ elseif (user_strength(i) > 1 & j > 1 & i~=length(user_strength))%B2.....Bn & not
         1-delta_mat(user_strength(i-1),j+1)+...
         (1-delta_mat(user_strength(i+1),j-1)) +...
         delta_mat(user_strength(i+1),j);
-    fun = @(delta_i) (qfunc(sqrt(3*p_a./(2.*(mod_order-1).*...
-        (delta_i.*p_b/2+noise))))).^2;
+    p_d     = power_vec(i); %desired power
+    p_is    = power_vec(i-1);%interferes power
+    p_iw    = power_vec(i+1);%interferes power
+    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (delta_i.*p_iw/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
     p_err_sym2 = (1/(timeoff_max -timeoff_min))*q*delta_i;
     p_bita2 = p_err_sym2/log(mod_order) 
@@ -80,8 +93,9 @@ elseif (user_strength(i) > 1 & j >= 1 & i==length(user_strength))
     %interf-> B1 and B2
     delta_i =(reverse_delta_mat(user_strength(i-1),j)) +...
         1-delta_mat(user_strength(i-1),j+1);
+    p_is    = power_vec(i-1);%interferes power
     fun = @(delta_i) (qfunc(sqrt(3*p_a./(2.*(mod_order-1).*...
-        (delta_i.*p_b/2+noise))))).^2;
+        (delta_i.*p_is./2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
     p_err_sym2 = (1/(timeoff_max -timeoff_min))*q*delta_i;
     p_bita2 = p_err_sym2/log(mod_order) 
