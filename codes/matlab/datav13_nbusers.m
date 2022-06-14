@@ -9,7 +9,7 @@
 clc;
 clear all;
 close all;
-rng(1);%same random seed 
+%rng(1);%same random seed 
 
 %% input data: environmnet
 %--------------------------------------------------------------------------
@@ -85,8 +85,7 @@ for initialK = 2:20
     K = initialK;
     [x(initialK-1),y(initialK-1),z(initialK-1),zz(initialK-1)] = seqsic(initialK,alldatadecoded,K,...
         pr_vec(4),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot);
-    x
-    y
+    
 end
 
 save x.mat;
