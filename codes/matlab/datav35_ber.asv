@@ -5,7 +5,7 @@
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
-%testing complexity results: ber vs nbdata
+%testing complexity results: ber vs receive ratio
 clc;
 clear all;
 close all;
@@ -15,7 +15,8 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-mpriority = 20;
+receive_pow_ratio_vec =linspace(0,40,50);%change here
+mpriority = length(receive_pow_ratio_vec);
 x = zeros(mpriority,1);
 y = zeros(mpriority,1);
 z = zeros(mpriority,1);
@@ -28,10 +29,10 @@ i = zeros(mpriority,1);
 j = zeros(mpriority,1);
 r = zeros(mpriority,1);
 s = zeros(mpriority,1);
-uu = zeros(mpriority,1);
-vv = zeros(mpriority,1);
-pp = zeros(mpriority,1);
-ll = zeros(mpriority,1);
+weakestconv = zeros(mpriority,1);
+weakestprop = zeros(mpriority,1);
+intermconv = zeros(mpriority,1);
+intermprop = zeros(mpriority,1);
 
 %% 
 % Number of Bits
@@ -54,15 +55,17 @@ rate_th      = log2( 1 + sqrt(pth/2)*g_th/noisepower);
 
 eth          = 1;
 timeslot     = 1;
-
+receive_pow_ratio = 10;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 20;%number of superimposed data
+K = 3;%number of superimposed data
 
-for indx = 2:mpriority
-initialK = indx;
-K  = indx;
+
+for indx = 1:length(receive_pow_ratio_vec)
+initialK = K;
+
+receive_pow_ratio =receive_pow_ratio_vec(indx);
 
 %Distances of users from rx
 dist_k = max_dist*abs(randn(K,1));
@@ -80,6 +83,12 @@ transmitpow_k = max_tx_power*abs(randn(K,1));
 %sorted transmit power vector %descending 
 power_vec = sort(transmitpow_k,'descend'); 
 
+power_vec(1) = max_tx_power;
+
+for d = 2: K
+    power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
+end
+    
 %tx power vec
 %power_vec = tx_power_percentage_vec.*tx_pow_k;
 pathloss_exp = sqrt(dist_vec.^-eta_vec);
@@ -100,17 +109,18 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 %fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
 
 [x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
-    h(indx),i(indx),j(indx),r(indx),s(indx),uu(indx),vv(indx),pp(indx),ll(indx)] =...
+    h(indx),i(indx),j(indx),r(indx),s(indx),weakestconv(indx),...
+    weakestprop(indx),intermconv(indx),intermprop(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
     pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
     z;
     zz;
     i;
     j;
-    uu - pp%weak user%ber of intermediate user higher than weakest user
-    vv - ll
-    pp;
-    ll;%intermediate
+    intermconv - weakestconv%weak user%ber of intermediate user higher than weakest user
+    intermprop - weakestprop 
+   
+    
 end
 
 save x.mat;
@@ -118,7 +128,7 @@ save y.mat;
 save z.mat;
 save zz.mat;
 
-function [a,b,c,d,e,f,g,h,i,j,r,s,uu,vv,pp,ll] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
+function [a,b,c,d,e,f,g,h,i,j,r,s,weakestconv,weakestprop,intermconv,intermprop] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,N,h_vec)
 
 sim_delay_prop = 0;
@@ -312,8 +322,8 @@ end
 
 ber_propuser1(v) = berfinal0(1);
 ber_convuser1(v) = berfinalconv(1);
-ber_propuserw(v) = berfinal0(2);
-ber_convuserw(v) = berfinalconv(2);
+ber_propuserw(v) = berfinal0(K);
+ber_convuserw(v) = berfinalconv(K);
 ber_propuseri(v) = berfinal0(round(K/2));
 ber_convuseri(v) = berfinalconv(round(K/2));
 %% sim delay
@@ -435,11 +445,11 @@ j = mean(avgberprop);
 r = mean(avgberconvuser1); 
 s = mean(avgberuser1); 
 
-uu = mean(avgberweakconv);
-vv = mean(avgberweakprop);
+weakestconv = mean(avgberweakconv);
+weakestprop = mean(avgberweakprop);
 
-pp = mean(avgberinterconv); 
-ll = mean(avgberinterprop); 
+intermconv = mean(avgberinterconv); 
+intermprop = mean(avgberinterprop); 
 
 %fprintf("nbusers %i\n",nbusers);
 %fprintf("avg energy eff proposed %f\n",mean(energy_eff));

@@ -107,10 +107,10 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     zz;
     i;
     j;
-    uu - pp%weak user%ber of intermediate user higher than weakest user
-    vv - ll
-    pp;
-    ll;%intermediate
+    uu%weak user
+    vv
+    pp
+    ll%intermediate
 end
 
 save x.mat;
@@ -312,8 +312,8 @@ end
 
 ber_propuser1(v) = berfinal0(1);
 ber_convuser1(v) = berfinalconv(1);
-ber_propuserw(v) = berfinal0(2);
-ber_convuserw(v) = berfinalconv(2);
+ber_propuserw(v) = berfinal0(K);
+ber_convuserw(v) = berfinalconv(K);
 ber_propuseri(v) = berfinal0(round(K/2));
 ber_convuseri(v) = berfinalconv(round(K/2));
 %% sim delay
@@ -606,8 +606,8 @@ elseif (user_strength(i) > 1 & j == 1 & i~=length(user_strength))%B1
     p_err_sym3 = p_interb1*(ber_vec(i-1,j)*ber_vec(i-1,j+1)+...
         (1-ber_vec(i-1,j))*ber_vec(i-1,j+1)+(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))...
         +(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1)))*log(mod_order);
-    p_bitb1 = p_err_sym3/log(mod_order); 
-    ber_vec(i,j) = p_bitb1;
+    p_bitb2 = p_err_sym3/log(mod_order); 
+    ber_vec(i,j) = p_bitb2;
     
 elseif (user_strength(i) > 1 & j > 1 & i~=length(user_strength))%B2.....Bn & not last user 
     %disp('here1 ')
@@ -638,8 +638,8 @@ elseif (user_strength(i) > 1 & j > 1 & i~=length(user_strength))%B2.....Bn & not
         (1-ber_vec(i-1,j))*ber_vec(i-1,j+1)+(ber_vec(i-1,j))*...
         (1-ber_vec(i-1,j+1))...
         +(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1)))*log(mod_order);
-    p_bitb2 = p_err_sym4/log(mod_order);
-    ber_vec(i,j) = p_bitb2;
+    p_bitc1 = p_err_sym4/log(mod_order);
+    ber_vec(i,j) = p_bitc1;
     
 elseif (user_strength(i) > 1 & j >= 1 & i==length(user_strength))
     %disp('here2 ')
