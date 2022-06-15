@@ -276,7 +276,7 @@ end
 %% complexity analysis 
 
 %only sic decoding 
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*(1/tolerance)*(1/tolerance);
+sic_complextiyprop(v) = sum(opt_decision_uk)^2*log(1/1e-6);
 sic_complextiyconv(v) = sum(initialK)^2;
 
 v = v+1;

@@ -27,6 +27,3 @@ cvx_end
 echo off
 
 decision_uk>0.8
-lam
-mu
-v

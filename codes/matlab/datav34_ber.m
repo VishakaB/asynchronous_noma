@@ -1,11 +1,11 @@
 %v16
-%initialized date: 23 may 2022
-%last updated: 25 may 2022
-%energy efficiency of NOMA asynchronous D2D SIC decoding
+%last update: 14 june 2022
+
+% %energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
-%testing complexity results: ee vs total interference in sic triangle
+%testing complexity results: ber vs nbdata
 clc;
 clear all;
 close all;
@@ -28,6 +28,10 @@ i = zeros(mpriority,1);
 j = zeros(mpriority,1);
 r = zeros(mpriority,1);
 s = zeros(mpriority,1);
+uu = zeros(mpriority,1);
+vv = zeros(mpriority,1);
+pp = zeros(mpriority,1);
+ll = zeros(mpriority,1);
 %% 
 % Number of Bits
 N=10^4;  
@@ -55,7 +59,7 @@ timeslot     = 1;
 userK_vec = [3,5,8,15,20];
 K = 20;%number of superimposed data
 
-for indx = 2:20
+for indx = 2:mpriority
 initialK = indx;
 K  = indx;
 
@@ -95,15 +99,17 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 %fprintf("indx pr  %i %f\n",indx,pr_vec(indx));
 
 [x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
-    h(indx),i(indx),j(indx),r(indx),s(indx)] =...
+    h(indx),i(indx),j(indx),r(indx),s(indx),uu(indx),vv(indx),pp(indx),ll(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
     pr_vec(2),power_vec,sym_dur_vec,g_vec,max_tx_power,timeslot,N,h_vec);
     z;
     zz;
     i;
     j;
-    r
-    s
+    uu;
+    vv;
+    pp
+    ll
 end
 
 save x.mat;
@@ -111,7 +117,7 @@ save y.mat;
 save z.mat;
 save zz.mat;
 
-function [a,b,c,d,e,f,g,h,i,j,r,s] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
+function [a,b,c,d,e,f,g,h,i,j,r,s,uu,vv,pp,ll] = seqsic(initialK,alldatadecoded,K,priority,power_vec,sym_dur_vec,...
 g_vec,max_tx_power,timeslot,N,h_vec)
 
 sim_delay_prop = 0;
@@ -194,7 +200,7 @@ proptstart(v)=tic;
 
 n = K;
 %% 
-cvx_begin quiet
+cvx_begin 
    variable decision_uk(n,1) 
    dual variables lam gan ha kl
    minimize(-decision_uk'*K_vec)
@@ -209,11 +215,12 @@ cvx_begin quiet
 cvx_end
 
 echo off
-
-decision_uk = decision_uk>0.8
+%fprintf('cvx_slvtol %f\n',cvx_iterations);
+diary on;
+decision_uk = decision_uk>0.8;
 
 %complexity prop
-sic_complextiyprop(v) = sum(opt_decision_uk)^2*(1/tolerance)*(1/tolerance);
+sic_complextiyprop(v) = sum(decision_uk)^2*log(1/tolerance)*log(1/tolerance);
 
 proptend(v)    = toc(proptstart(v));
 
@@ -262,6 +269,10 @@ end
 
 ber_propuser1(v) = berfinal0(1);
 ber_convuser1(v) = berfinalconv(1);
+ber_propuserw(v) = berfinal0(K);
+ber_convuserw(v) = berfinalconv(K);
+ber_propuseri(v) = berfinal0(round(K/2));
+ber_convuseri(v) = berfinalconv(round(K/2));
 %% sim delay
 
 if(K>1)
@@ -274,14 +285,14 @@ end
 if K<=1 
     alldatadecoded = true;
     %proptend(v)    = toc(proptstart(v));
-    disp('break');
+    %disp('break');
     nbiterations  = nbiterations+1;
     iterations(v) = nbiterations;
 else
     nbiterations  = nbiterations+1;
     iterations(v) = nbiterations;
-    fprintf('nbiterations %i\n',nbiterations);
-    decision_uk(1) = 1
+    %fprintf('nbiterations %i\n',nbiterations);
+    decision_uk(1) = 1;%make sure decision_uk is non zero
     %break;
 end%end if 
 
@@ -349,8 +360,15 @@ avggradientdelay(i) = mean(proptend);
 avgberconv(i) = mean(ber_conv);
 avgberprop(i) = mean(ber_prop);
 
-avgberconvuser1(i) =mean(ber_convuser1);
+avgberconvuser1(i) = mean(ber_convuser1);
 avgberuser1(i) = mean(ber_propuser1);
+
+avgberweakprop = mean(ber_propuserw);
+avgberweakconv = mean(ber_convuserw);
+
+avgberinterprop = mean(ber_propuseri);
+avgberinterconv = mean(ber_convuseri);
+
 end
 end
 
@@ -371,6 +389,12 @@ j = mean(avgberprop);
 
 r = mean(avgberconvuser1); 
 s = mean(avgberuser1); 
+
+uu = mean(avgberweakconv);
+vv = mean(avgberweakprop);
+
+pp = mean(avgberinterconv); 
+ll = mean(avgberinterprop); 
 
 fprintf("nbusers %i\n",nbusers);
 fprintf("avg energy eff proposed %f\n",mean(energy_eff));
