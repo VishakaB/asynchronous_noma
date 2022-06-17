@@ -58,7 +58,7 @@ timeslot     = 1;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 20;%number of superimposed data
+K = 3;%number of superimposed data
 
 for indx = 2:mpriority
 initialK = indx;
@@ -107,8 +107,6 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     zz;
     i;
     j;
-    uu - pp%weak user%ber of intermediate user higher than weakest user
-    vv - ll
     pp;
     ll;%intermediate
 end
@@ -245,7 +243,7 @@ n = K;
 %% 
 cvx_begin quiet
    variable decision_uk(n,1)
-   dual variables lam gan ha kl
+   dual variables lam gan ha
    minimize(-decision_uk'*K_vec)
    subject to
       lam : -sum(decision_uk)+ sum(decision_uk.^2)<=0;
@@ -254,7 +252,6 @@ cvx_begin quiet
            
       ha: decision_uk.*((noisepower^2 + interf_vec + power_vec(1:K).*mean(g_vec(1:K,:),2))...
                 -power_vec(1:K).*mean(g_vec(1:K,:),2)*(1+1/sinr_th)) <= 0  
-      kl: sum(decision_uk)>0
 cvx_end
 
 echo off

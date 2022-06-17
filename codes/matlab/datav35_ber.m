@@ -15,7 +15,7 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,40,5);%change here
+receive_pow_ratio_vec =linspace(0,40,10);%change here
 mpriority = length(receive_pow_ratio_vec);
 x = zeros(mpriority,1);
 y = zeros(mpriority,1);
@@ -43,7 +43,7 @@ max_dist     = 100;%meters
 max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 500;%change this
+max_tx_power = 1000;%change this
 B            = 1;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;
@@ -55,11 +55,11 @@ rate_th      = log2( 1 + sqrt(pth/2)*g_th/noisepower);
 
 eth          = 1;
 timeslot     = 1;
-receive_pow_ratio = 10;
+receive_pow_ratio = 40;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 3;%number of superimposed data
+K = 20;%number of superimposed data
 
 for indx = 1:length(receive_pow_ratio_vec)
 initialK = K;
@@ -72,10 +72,10 @@ dist_k = max_dist*abs(randn(K,1));
 %sorted transmit power vector %descending 
 dist_vec = sort(dist_k,'ascend'); 
 
-dist_vec(1) = max_dist;
-
-for d = 2: K
-    dist_vec(d) = dist_vec(d-1)/10^(receive_pow_ratio);
+dist_vec(K) = max_dist;%farthest user distance
+dist_ratio = 0.8; %change here
+for d = K-1:-1:1
+    dist_vec(d) = dist_vec(d+1)*exp(-dist_ratio);
 end
 
 % Path loss exponent
@@ -89,11 +89,11 @@ transmitpow_k = max_tx_power*abs(randn(K,1));
 power_vec = sort(transmitpow_k,'descend'); 
 
 power_vec(1) = max_tx_power;
-
+%change here
 for d = 2: K
     power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
 end
-    
+
 %tx power vec
 %power_vec = tx_power_percentage_vec.*tx_pow_k;
 pathloss_exp = sqrt(dist_vec.^-eta_vec);
@@ -122,10 +122,11 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     zz;
     i;
     j;
-    intermconv - weakestconv%weak user%ber of intermediate user higher than weakest user
-    intermprop - weakestprop 
-   
-    
+    intermconv 
+    intermprop
+    weakestconv%weak user%ber of intermediate user higher than weakest user 
+    weakestprop 
+       
 end
 
 save x.mat;
@@ -260,7 +261,7 @@ n = K;
 %% 
 cvx_begin quiet
    variable decision_uk(n,1)
-   dual variables lam gan ha kl
+   dual variables lam gan ha
    minimize(-decision_uk'*K_vec)
    subject to
       lam : -sum(decision_uk)+ sum(decision_uk.^2)<=0;
@@ -269,7 +270,6 @@ cvx_begin quiet
            
       ha: decision_uk.*((noisepower^2 + interf_vec + power_vec(1:K).*mean(g_vec(1:K,:),2))...
                 -power_vec(1:K).*mean(g_vec(1:K,:),2)*(1+1/sinr_th)) <= 0  
-      kl: sum(decision_uk)>0
 cvx_end
 
 echo off
@@ -575,21 +575,26 @@ for i = 1: length(user_strength)
 for j = 1: nsym(i)
     
 if user_strength(i) == 1 & j == 1%A1
-    %interf by B1, s+1
-    delta_i = delta_mat(user_strength(i+1),j);%known
+    %interf by B1 and C1, s+1
+    
     p_d     = power_vec(i); %desired power
-    p_iw    = power_vec(i+1);%interferes power 
+    delta_i = [delta_mat(user_strength(i+1),j)];%known
+    p_iw    = [power_vec(i+1)];%interferes power 
+    if (length(user_strength)>=3)
+        delta_i = [delta_mat(user_strength(i+1),j);delta_mat(user_strength(i+2),j)];%known
+        p_iw    = [power_vec(i+1);power_vec(i+2)];%interferes power 
+    end
     %disp('yea')
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-    (delta_i.*p_iw/2+noise))))).^2;
+    (sum(delta_i.*p_iw)/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
-    p_err_sym1 = (1/(timeoff_max -timeoff_min))*q*delta_i;
+    p_err_sym1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
     p_bita1    = p_err_sym1/log(mod_order);
     ber_vec(i,1) = p_bita1;
     
 elseif (user_strength(i) == 1 & j > 1)%A2.... An
     %disp('no')
-    %interf->B1 and B2 %s-1 and s+1
+    %interf->B1 and B2 and C1 %s-1 and s+1
     delta_i = [(1-delta_mat(user_strength(i+1),j-1)); ...
         delta_mat(user_strength(i+1),j)];
     p_d     = power_vec(i); %desired power
@@ -669,10 +674,6 @@ elseif (user_strength(i) > 1 & j >= 1 & i==length(user_strength))
         (sum(detected_vec.*delta_i.*power_v)+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
     p_interb3 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-    %{p_err_sym3 = p_interb3*(ber_vec(i-1,j)*ber_vec(i-1,j+1)*+...
-        %(1-ber_vec(i-1,j))*ber_vec(i-1,j+1)+(ber_vec(i-1,j))*...
-        %(1-ber_vec(i-1,j+1))...
-        %+(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1)));
     if (i>=3)
         A_branch = ber_vec(i-2,j)*ber_vec(i-2,j+1)*ber_vec(i-2,j+2)+...
         ber_vec(i-2,j)*ber_vec(i-2,j+1)*(1-ber_vec(i-2,j+2))+...
