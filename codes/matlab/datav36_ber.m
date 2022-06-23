@@ -61,13 +61,14 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     zz;
     i;
     j;
-    r
-    s
-    intermconv 
-    intermprop
-    weakestconv%weak user%ber of intermediate user higher than weakest user 
-    weakestprop 
-       
+    r;
+    s;
+    intermconv ;
+    intermprop;
+    weakestconv;%weak user%ber of intermediate user higher than weakest user 
+    weakestprop; 
+    x;
+    y;
 end
 
 save x.mat;

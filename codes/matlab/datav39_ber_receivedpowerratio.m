@@ -5,7 +5,7 @@
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
-%testing complexity results: ber vs nbdata
+%testing complexity results: ber vs received power ratio
 clc;
 clear all;
 close all;
@@ -16,11 +16,11 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,1,10);%change here
+receive_pow_ratio_vec =linspace(0,10,10);%change here
 mpriority = length(receive_pow_ratio_vec);
 
-x = zeros(mpriority,1);
-y = zeros(mpriority,1);
+EEconv = zeros(mpriority,1);
+EEprop = zeros(mpriority,1);
 z = zeros(mpriority,1);
 zz = zeros(mpriority,1);
 e = zeros(mpriority,1);
@@ -29,6 +29,7 @@ g = zeros(mpriority,1);
 h = zeros(mpriority,1);
 i = zeros(mpriority,1);
 j = zeros(mpriority,1);
+
 strongconv = zeros(mpriority,1);
 strongprop = zeros(mpriority,1);
 weakconv = zeros(mpriority,1);
@@ -60,7 +61,7 @@ timeslot     = 1;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 10;%number of superimposed data
+K = 3;%number of superimposed data
 
 for indx = 1:mpriority
     
@@ -69,7 +70,7 @@ receive_pow_ratio = receive_pow_ratio_vec(indx);
 
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
-[x(indx),y(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
+[EEconv(indx),EEprop(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
     h(indx),i(indx),j(indx),strongconv(indx),strongprop(indx),weakconv(indx),...
     weakprop(indx),intermconv(indx),intermprop(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
@@ -78,8 +79,10 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     strongprop;
     intermconv;
     intermprop;
-    weakconv
-    weakprop
+    weakconv;
+    weakprop;
+    EEconv
+    EEprop
 end 
  
 save x.mat;
@@ -162,7 +165,7 @@ end
 
 initialK_vec = K_vec;
 miter = 10;
-priority_max = 30;
+priority_max = 120;
 lambda1 = priority;%change this%energy saving priority %left energy is low
 learn_rate = 0.4;
 tolerance2 = 0.5;%lambda
@@ -343,7 +346,7 @@ for k = 1:length(decision_uk)
     K_vec(k,1) = length(decision_uk)-(k-1);
 end
 
-total_energ_consump = E_max - E_max^(exp(-log(2)/1000*opt_decision_uk'*K_vec));
+total_energ_consump = E_max - E_max^(exp(-log(2)/1000*decision_uk'*K_vec));
 energy_eff(v) = total_throughput/(total_energ_consump +0.01);
 energy_eff;
 
@@ -371,7 +374,6 @@ sic_complextiyconv(v) = sum(initialK)^2;
 v = v+1;%all user decoding index v
 
 end %end while
-
 
 %i: random iteration index
 avgenergy_eff(i) = abs(mean(energy_eff));
@@ -1210,6 +1212,7 @@ else
 end
 end
 end
+
 berfinalconv = sum(ber_vec,2);
 
 end

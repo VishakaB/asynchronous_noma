@@ -179,6 +179,7 @@ end
 
 clear delta_mat;
 clear reverse_delta_mat;
+
 %time offsets between users 
 %delta_mat: rows -> user index, columns-> symbol index %time offset with
 delta_mat = zeros(K,K);
