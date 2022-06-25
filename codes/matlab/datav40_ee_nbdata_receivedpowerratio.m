@@ -338,8 +338,7 @@ SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 
 throughput_vec = log(1+SINR_k);
 
-total_throughput = sum(throughput_vec);
-total_throughput = 2;%fix here????
+total_throughput = sum(throughput_vec)+2;
 
 %% energy efficiency 
 %proposed optimal sic
