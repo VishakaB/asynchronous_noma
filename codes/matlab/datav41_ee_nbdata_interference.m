@@ -107,7 +107,7 @@ alldatadecoded = false;
 fprintf('receive_pow_ratio %i\n',receive_pow_ratio);
 
 for i = 1:nbrandom_iterations %random iterations 
-v =1;
+v = 1;
 K = initialK;
 max_dist     = 100;%meters
 max_eta      = 10;

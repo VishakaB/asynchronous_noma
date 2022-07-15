@@ -1,0 +1,31 @@
+
+initial_guess = [0.1,0.1]
+
+0< omeg < 1
+-1< mu <1
+alpha1  = 0.4
+alpha2  = 0.6
+rho_s = 0.9;
+
+lb = [0,-1];
+ub = [1,1];
+
+function [c,eq] = constraint(omeg,mu)
+    c = omeg - 1;
+    c = omeg;
+    ceq = [];
+end
+
+function f = cost_function(omeg,mu,alpha1,alpha2,rho_s)
+
+  num = alpha1.*rho_s.*omeg
+  den = (1-rho_s).*mu+1
+  s1 = num/den
+  
+  num2 = alpha2.*rho_s
+  den2 = (1-rho_s).*mu+1
+  s2 = num2/den2
+ 
+  f = log2((1+s1)/(1+s2))
+  
+end

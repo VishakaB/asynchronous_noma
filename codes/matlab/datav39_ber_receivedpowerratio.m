@@ -16,8 +16,8 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,10,10);%change here
-mpriority = length(receive_pow_ratio_vec);
+receive_pow_ratio_vec =linspace(0,10,20);%change here
+mpriority = 20;
 
 EEconv = zeros(mpriority,1);
 EEprop = zeros(mpriority,1);
@@ -62,8 +62,9 @@ timeslot     = 1;
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
 K = 3;%number of superimposed data
+transmit_snrdb_vec  =linspace(10,20,20);
 
-for indx = 1:mpriority
+for indx = 1:length(transmit_snrdb_vec)
     
 initialK = K;
 receive_pow_ratio = receive_pow_ratio_vec(indx);
@@ -74,26 +75,28 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     h(indx),i(indx),j(indx),strongconv(indx),strongprop(indx),weakconv(indx),...
     weakprop(indx),intermconv(indx),intermprop(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
-    pr_vec(2),N,receive_pow_ratio_vec,receive_pow_ratio);
-    strongconv;
-    strongprop;
+    pr_vec(2),N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snrdb_vec(indx));
+    strongconv
+    strongprop
     intermconv;
     intermprop;
-    weakconv;
-    weakprop;
-    EEconv
-    EEprop
+    weakconv
+    weakprop
+    EEconv;
+    EEprop;
 end 
  
-save x.mat;
-save y.mat;
-save z.mat;
-save zz.mat;
+save strongconv.mat;
+save strongprop.mat;
+save weakconv.mat;
+save weakprop.mat;
+save weakconv.mat;
+save weakprop.mat;
 
 function [a,b,c,d,e,f,g,h,i,j,...
     strongconv,strongprop,weakconv,weakprop,intermconv,intermprop]...
     = seqsic(initialK,alldatadecoded,K,priority,...
-N,receive_pow_ratio_vec,receive_pow_ratio)
+N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snrdb)
 
 sim_delay_prop = 0;
 sim_delay_conv = 0;
@@ -134,6 +137,7 @@ power_vec = sort(transmitpow_k,'descend');
 power_vec(1) = max_tx_power;
 %receive_pow_ratio = receive_pow_ratio_vec(receive_pow_ratioi);
 %change here
+power_vec(1) =  10^(transmit_snrdb/10)*noisepower;
 for d = 2: K
     power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
 end
@@ -193,10 +197,10 @@ clear reverse_delta_mat;
 %delta_mat: rows -> user index, columns-> symbol index %time offset with
 delta_mat = zeros(K,K);
 delta_mat(1,:) = zeros(K,1);
-delta_mat(2:K,:) = 0.5*rand(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
+delta_mat(2:K,:) = 0.1*ones(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
 
 reverse_delta_mat(K,:)  = zeros(K,1);
-reverse_delta_mat(1:K-1,:) = 0.5*rand(K-1,K);%A1, A2
+reverse_delta_mat(1:K-1,:) = 0.1*ones(K-1,K);%A1, A2
 
 for j = 1:K%interference vector loop
 for k = 1:K
@@ -214,7 +218,23 @@ for k = 1:K
  desired_id = desired_id+1;
 end
 end
-       
+
+desired_id = 1;
+for j = 1:K%interference vector loop
+for k = 1:K%neighbor users index
+     if k ~= desired_id  %strongest
+        interf_vec(desired_id) = interf_vec(desired_id)+sum(power_vec(k).*...
+            mean(g_vec(k,:),2).*delta_mat(desired_id,:));
+     elseif desired_id == 1
+        if(k<K)
+        interf_vec(desired_id) = sum(power_vec(k+1).*...
+            mean(g_vec(k+1,:),2).*delta_mat(desired_id+1,:));
+        end
+     end
+end
+desired_id = desired_id+1;
+end
+
 %% optimization problem
 pastdelay = 0;
 nbiter = 10;
@@ -229,15 +249,16 @@ n = K;
 %% 
 cvx_begin quiet
    variable decision_uk(n,1)
-   dual variables lam gan ha
+   dual variables var1 var2 var3 var4
    minimize(-decision_uk'*K_vec)
    subject to
-      lam : -sum(decision_uk)+ sum(decision_uk.^2)<=0;
+      var1 : -sum(decision_uk)+ sum(decision_uk.^2)<=0;
 
-      gan: decision_uk'*sumsym_dur_vec-1/(priority+0.001)*priority_max/timeslot <= 0
+      var2: decision_uk'*sumsym_dur_vec-1/(priority+0.001)*priority_max/timeslot <= 0
            
-      ha: decision_uk.*((noisepower^2 + interf_vec + power_vec(1:K).*mean(g_vec(1:K,:),2))...
+      var3: decision_uk.*((noisepower^2 + interf_vec + power_vec(1:K).*mean(g_vec(1:K,:),2))...
                 -power_vec(1:K).*mean(g_vec(1:K,:),2)*(1+1/sinr_th)) <= 0  
+      var4: decision_uk(1:K-1)>= decision_uk(2:K)     
 cvx_end
 
 echo off
@@ -327,7 +348,6 @@ end%end if
 decision_uk ;
 K = K-sum(decision_uk);%update K
 end%end if 
-
 
 %% throughput of each user
 %considering synchronous uplink noma
@@ -598,37 +618,38 @@ elseif (user_strength(i) > 1 & j == 1 & i~=length(user_strength))%B1
     %change here %error vec1
     error_vec1 = [1;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    %change here
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q1   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q1*sum(delta_i.*error_vec1);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q1)*sum(delta_i.*error_vec1);
     p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
     
     %change here %error vec1
     error_vec1 = [1;0;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q2   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb2 = (1/(timeoff_max -timeoff_min))*q2*sum(delta_i.*error_vec1);
+    p_interb2 = (1/(timeoff_max -timeoff_min))*(1-q2)*sum(delta_i.*error_vec1);
     p_err_sym_ec2 = p_interb2*(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
     
     %change here %error vec2
     error_vec1 = [0;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q3   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb3 = (1/(timeoff_max -timeoff_min))*q3*sum(delta_i.*error_vec1);
+    p_interb3 = (1/(timeoff_max -timeoff_min))*(1-q3)*sum(delta_i.*error_vec1);
     p_err_sym_ec3 = p_interb3*(1-ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
     
     %change here %error vec3
     error_vec1 = [0;0;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q4   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb4 = (1/(timeoff_max -timeoff_min))*q4*sum(delta_i.*error_vec1);
+    p_interb4 = (1/(timeoff_max -timeoff_min))*(1-q4)*sum(delta_i.*error_vec1);
     p_err_sym_ec4 = p_interb4*(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
     
     avgperr = mean(p_err_sym_ec1 +p_err_sym_ec2 +p_err_sym_ec3 +p_err_sym_ec4);
@@ -661,37 +682,37 @@ elseif (user_strength(i) > 1 & j > 1 & i~=round(length(user_strength)))%B2.....B
     %change here %error vec1
     error_vec1 = [1;1;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q1   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q1*sum(delta_i.*error_vec1);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q1)*sum(delta_i.*error_vec1);
     p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
     
     %change here %error vec1
     error_vec2 = [1;0;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q2   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb2 = (1/(timeoff_max -timeoff_min))*q2*sum(delta_i.*error_vec2);
+    p_interb2 = (1/(timeoff_max -timeoff_min))*(1-q2)*sum(delta_i.*error_vec2);
     p_err_sym_ec2 = p_interb2*(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
     
     %change here %error vec1
     error_vec3 = [0;1;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q3   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb3 = (1/(timeoff_max -timeoff_min))*q3*sum(delta_i.*error_vec3);
+    p_interb3 = (1/(timeoff_max -timeoff_min))*(1-q3)*sum(delta_i.*error_vec3);
     p_err_sym_ec3 = p_interb3*(1-ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
     
     %change here %error vec1
     error_vec4 = [0;0;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q4   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb4 = (1/(timeoff_max -timeoff_min))*q4*sum(delta_i.*error_vec4);
+    p_interb4 = (1/(timeoff_max -timeoff_min))*(1-q4)*sum(delta_i.*error_vec4);
     p_err_sym_ec4 = p_interb4*(1-round(ber_vec(i-1,j)))*log(mod_order)*(1-round(ber_vec(i-1,j+1)))*log(mod_order);
     %p_err_sym_ec4 = p_err_sym_ec3;
     avgperr2 = mean(p_err_sym_ec1 +p_err_sym_ec2 +p_err_sym_ec3 +p_err_sym_ec4);
@@ -711,37 +732,37 @@ elseif (user_strength(i) > 1 & j == 1 & i==round(length(user_strength)))
     
     error_vec1 = [1;1;];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q1   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q1*sum(delta_i.*error_vec1);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q1)*sum(delta_i.*error_vec1);
     p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-1,j+1))*...
         log(mod_order);
     
     error_vec2 = [1;0;];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec2))+noise))))).^2;
     q2   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb2 = (1/(timeoff_max -timeoff_min))*q2*sum(delta_i.*error_vec2);
+    p_interb2 = (1/(timeoff_max -timeoff_min))*(1-q2)*sum(delta_i.*error_vec2);
     p_err_sym_ec2 = p_interb2*(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*...
         log(mod_order);
     
     error_vec3 = [0;1;];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec3))+noise))))).^2;
     q3   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb3 = (1/(timeoff_max -timeoff_min))*q3*sum(delta_i.*error_vec3);
+    p_interb3 = (1/(timeoff_max -timeoff_min))*(1-q3)*sum(delta_i.*error_vec3);
     p_err_sym_ec3 = p_interb3*(1-ber_vec(i-1,j))*(ber_vec(i-1,j+1))*...
         log(mod_order);
    
     error_vec4 = [0;0;];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec4))+noise))))).^2;
     q4   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb4 = (1/(timeoff_max -timeoff_min))*q4*sum(delta_i.*error_vec4);
+    p_interb4 = (1/(timeoff_max -timeoff_min))*(1-q4)*sum(delta_i.*error_vec4);
     p_err_sym_ec4 = p_interb4*(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*...
         log(mod_order);
     %p_err_sym_ec4 = p_err_sym_ec3
@@ -1024,189 +1045,197 @@ if user_strength(i) == 1 & j == 1%A1
     p_d     = power_vec(i); %desired power
     p_iw    = power_vec(i+1);%interferes power 
     %disp('yea')
-    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
     (delta_i.*p_iw/2+noise))))).^2;
-    %fprintf('length(user_strength) %f\n',length(user_strength))   
+    %fprintf('length(user_strength) %f\n',length(user_strength))  
+    q   = integral(fun,timeoff_min,timeoff_max);
     if (length(user_strength)>2)
-       %interf by B1 and C1
        delta_i = [delta_mat(user_strength(i+1),j);delta_mat(user_strength(i+2),j)];%known
        p_d     = power_vec(i); %desired power
        p_iw    = [power_vec(i+1);power_vec(i+2)];%interferes power 
-       fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-       (sum(delta_i.*p_iw)/2+noise))))).^2;
+       fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+       ((delta_i.*p_iw)/2+noise))))).^2;
+       q   = integral(fun,timeoff_min,timeoff_max, ArrayValued=true);
     end
-    
-    q   = integral(fun,timeoff_min,timeoff_max);
-    p_err_sym1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
+        
+    p_err_sym1 = (1/(timeoff_max -timeoff_min))*mean(1-q.*(delta_i));
     p_bita1    = p_err_sym1/log(mod_order);
     ber_vec(i,1) = p_bita1;
+    %interf by B1,C1 s+1
     
 elseif (user_strength(i) == 1 & j > 1)%A2.... An
-
-    %interf-> B2 %s-1 and s+1
-    delta_i = delta_mat(user_strength(i+1),j);
+    %disp('no')
+    %interf->B1 and B2 %s-1 and s+1
+    delta_i = [(1-delta_mat(user_strength(i+1),j-1)); ...
+        delta_mat(user_strength(i+1),j)];
     p_d     = power_vec(i); %desired power
     p_iw     = power_vec(i+1);%interferes power
-    power_v  = p_iw/2;
-    fun = @(delta_i) qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (delta_i*power_v+noise)))).^2;
+    power_v  = [p_iw/2;p_iw/2];
+    fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v)+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
-    p_err_sym2 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
+    p_err_sym2 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
     p_bita2 = p_err_sym2/log(mod_order); 
     ber_vec(i,j) = p_bita2;
     
 elseif (user_strength(i) > 1 & j == 1 & i~=length(user_strength))%B1
-    %inter -> A1 and C1
+    %inter -> A1, A2 and C1
     %disp('here0')
-    delta_i = [(reverse_delta_mat(user_strength(i-1),j)); ...
+    delta_i = [(reverse_delta_mat(user_strength(i-1),j));...
+        (1-reverse_delta_mat(user_strength(i-1),j+1)); ...
         delta_mat(user_strength(i+1),j);];
-    detected_vec = [(6/(mod_order-1));1;];
+    detected_vec = [(6/(mod_order-1));(6/(mod_order-1));1;];
     p_d     = power_vec(i); %desired power
     p_is    = power_vec(i-1);%interferes power
     p_iw    = power_vec(i+1);%interferes power
-    power_v  = [p_is/2;p_iw/2];
+    power_v  = [p_is/2;p_is/2;p_iw/2];
+    
+    %change here %error vec1
+    error_vec1 = [1;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (sum(delta_i.*power_v)+noise))))).^2;
-    q   = integral(fun,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-    p_err_sym3 = (p_interb1*ber_vec(i-1,j)*log(mod_order)+...
-        p_interb1*(1-ber_vec(i-1,j))*log(mod_order));
-    p_bitb1 = p_err_sym3/log(mod_order); 
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
+    
+    %change here %error vec1
+    error_vec1 = [1;0;1];%one error one correct
+    %include the delta i into the func expression???????
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec2 = p_interb1*(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
+    
+    %change here %error vec2
+    error_vec1 = [0;1;1];%one error one correct
+    %include the delta i into the func expression???????
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec3 = p_interb1*(1-ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
+    
+    %change here %error vec3
+    error_vec1 = [0;0;1];%one error one correct
+    %include the delta i into the func expression???????
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec4 = p_interb1*(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
+    
+    avgperr = mean(p_err_sym_ec1 +p_err_sym_ec2 +p_err_sym_ec3 +p_err_sym_ec4);
+
+    p_bitb1 = avgperr/log(mod_order); 
     ber_vec(i,j) = p_bitb1;
     
-elseif (user_strength(i) > 1 & j >= 1 & i~=length(user_strength))%B2.....Bn & not last user 
+elseif (user_strength(i) > 1 & j > 1 & i~=length(user_strength))%B2.....Bn & not last user 
     %disp('here1 ')
-    %inter -> A2, C2
-    nbinterf = 2;
+    %inter -> A2, A3 and C1, C2
+    nbinterf = 4;
     delta_i = zeros(nbinterf,1);
-    for h = 1: 2
+    for h = 1: nbinterf
         if h == 1
             delta_i(h) = (reverse_delta_mat(user_strength(i-1),j));
+        elseif h == 2
+            delta_i(h) = 1-reverse_delta_mat(user_strength(i-1),j+1);
+        elseif h == 3
+            delta_i(h) = (1-delta_mat(user_strength(i+1),j-1));
         else
             delta_i(h) = delta_mat(user_strength(i+1),j);
         end
     end
-    detected_vec = [(6/(mod_order-1));1;];
+    detected_vec = [(6/(mod_order-1));(6/(mod_order-1));1;1;];
     p_d     = power_vec(i); %desired power
     p_is    = power_vec(i-1);%interferes power
     p_iw    = power_vec(i+1);%interferes power
-    power_v  = [p_is/2;p_iw/2];
+    power_v  = [p_is/2;p_is/2;p_iw/2;p_iw/2];
     
-    %error vec 
-    error_vec1 = [0;1];%one error one correct
+    %change here %error vec1
+    error_vec1 = [1;1;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-    p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*...
-        log(mod_order);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-1,j+1))*log(mod_order);
     
-    %error vec 
-    error_vec1 = [1;1];%one error one correct
+    %change here %error vec1
+    error_vec1 = [1;0;1;1];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-    p_err_sym_ec12 = p_interb1*(1-ber_vec(i-1,j))*...
-        log(mod_order);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec2 = p_interb1*(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
     
-    avgperr2 = mean(p_err_sym_ec1+p_err_sym_ec12);
+    %change here %error vec1
+    error_vec1 = [0;0;1;1];%one error one correct
+    %include the delta i into the func expression???????
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec2 = p_interb1*(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*log(mod_order);
+    
+    avgperr2 = mean(p_err_sym_ec1 +p_err_sym_ec2 +p_err_sym_ec3 +p_err_sym_ec4);
 
     p_bitb2 = avgperr2/log(mod_order); 
     ber_vec(i,j) = p_bitb2;
-          
-elseif (user_strength(i) >= 2 & j == 1 & i==length(user_strength)) %C1
+    
+elseif (user_strength(i) > 1 & j == 1 & i==length(user_strength))
     %disp('here2 ')
-    %interf->  A1
-    delta_i =[reverse_delta_mat(user_strength(i-1),j)];
-    detected_vec = [(6/(mod_order-1));];
-    p_d     = power_vec(i);  %desired power
-    p_is    = power_vec(i-1); %interferes power
-    power_v  = [p_is/2;];
+    %interf-> B1 and B2
+    delta_i =[(reverse_delta_mat(user_strength(i-1),j)); ...
+        1-reverse_delta_mat(user_strength(i-1),j+1)];
+    detected_vec = [(6/(mod_order-1));(6/(mod_order-1))];
+    p_d     = power_vec(i); %desired power
+    p_is    = power_vec(i-1);%interferes power
+    power_v  = [p_is/2;p_is/2;];
     
-    %error vec 
-    error_vec1 = [0;1];%one error one correct
+    error_vec1 = [1;1;];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-    p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*...
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec1 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-1,j+1))*...
         log(mod_order);
     
-    %error vec 
-    error_vec1 = [1;1];%one error one correct
+    error_vec1 = [1;0;];%one error one correct
     %include the delta i into the func expression???????
-    fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
     q   = integral(fun1,timeoff_min,timeoff_max);
-    p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-    p_err_sym_ec2 = p_interb1*(1-ber_vec(i-1,j))*...
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec2 = p_interb1*(ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*...
         log(mod_order);
     
-    avgperr2 = mean(p_err_sym_ec1+p_err_sym_ec2);
+    error_vec1 = [0;1;];%one error one correct
+    %include the delta i into the func expression???????
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec3 = p_interb1*(1-ber_vec(i-1,j))*(ber_vec(i-1,j+1))*...
+        log(mod_order);
+   
+    error_vec1 = [0;0;];%one error one correct
+    %include the delta i into the func expression???????
+    fun1 = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
+    q   = integral(fun1,timeoff_min,timeoff_max);
+    p_interb1 = (1/(timeoff_max -timeoff_min))*(1-q)*sum(delta_i);
+    p_err_sym_ec4 = p_interb1*(1-ber_vec(i-1,j))*(1-ber_vec(i-1,j+1))*...
+        log(mod_order);
+    
+    avgperr2 = mean(p_err_sym_ec1 +p_err_sym_ec2 +p_err_sym_ec3 +p_err_sym_ec4);
 
     p_bitb2 = avgperr2/log(mod_order); 
     ber_vec(i,j) = p_bitb2;
     
-elseif (user_strength(i) > 2 & j > 1 & i==length(user_strength))
-    %interf A1 B1
-        disp('last user!!!!!')
-        delta_i =[(reverse_delta_mat(user_strength(i-1),j)); ...
-        (1-reverse_delta_mat(user_strength(i-2),j))];
-        detected_vec = [(6/(mod_order-1));(6/(mod_order-1))];
-        p_d     = power_vec(i); %desired power
-        p_iss    = power_vec(i-1);%interferes power
-        p_is    = power_vec(i-1);%interferes power
-        power_v  = [p_iss/2;p_is/2;];
-        
-        %error vec 
-        error_vec1 = [0;0];%one error one correct
-        %include the delta i into the func expression???????
-        fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-            (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
-        q   = integral(fun1,timeoff_min,timeoff_max);
-        p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-        p_err_sym_ec1 = p_interb1*(1-ber_vec(i-1,j))*(1-ber_vec(i-2,j))*...
-            log(mod_order);
-        
-        %error vec 
-        error_vec1 = [0;1];%one error one correct
-        %include the delta i into the func expression???????
-        fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-            (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
-        q   = integral(fun1,timeoff_min,timeoff_max);
-        p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-        p_err_sym_ec2 = p_interb1*(1-ber_vec(i-1,j))*(ber_vec(i-2,j))*...
-            log(mod_order);
-        
-        %error vec 
-        error_vec1 = [1;0];%one error one correct
-        %include the delta i into the func expression???????
-        fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-            (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
-        q   = integral(fun1,timeoff_min,timeoff_max);
-        p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-        p_err_sym_ec3 = p_interb1*(ber_vec(i-1,j))*(1-ber_vec(i-2,j))*...
-            log(mod_order);
-        
-        %error vec 
-        error_vec1 = [1;1];%one error one correct
-        %include the delta i into the func expression???????
-        fun1 = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-            (sum(delta_i.*power_v.*detected_vec.*(error_vec1))+noise))))).^2;
-        q   = integral(fun1,timeoff_min,timeoff_max);
-        p_interb1 = (1/(timeoff_max -timeoff_min))*q*sum(delta_i);
-        p_err_sym_ec4 = p_interb1*(ber_vec(i-1,j))*(ber_vec(i-2,j))*...
-            log(mod_order);
-        avgperr2 = mean(p_err_sym_ec1+p_err_sym_ec2+p_err_sym_ec3+p_err_sym_ec4);
-
-        p_bitb2 = avgperr2/log(mod_order); 
-        ber_vec(i,j) = p_bitb2;
-
 else
     disp('oops conv')
 end

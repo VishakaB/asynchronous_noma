@@ -70,7 +70,10 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     h(indx),i(indx),j(indx),r(indx),s(indx),uu(indx),vv(indx),pp(indx),ll(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
     pr_vec(2),N);
-
+    r
+    s
+    uu
+    vv   
 end 
  
 save x.mat;
@@ -193,7 +196,23 @@ for k = 1:K
  desired_id = desired_id+1;
 end
 end
-       
+%{
+desired_id = 1;
+for j = 1:K%interference vector loop
+for k = 1:K%neighbor users index
+     if k ~= desired_id  %strongest
+        interf_vec(desired_id) = interf_vec(desired_id)+sum(power_vec(k).*...
+            mean(g_vec(k,:),2).*delta_mat(desired_id,:));
+     elseif desired_id == 1
+        if(k<K)
+        interf_vec(desired_id) = sum(power_vec(k+1).*...
+            mean(g_vec(k+1,:),2).*delta_mat(desired_id+1,:));
+        end
+     end
+end
+desired_id = desired_id+1;
+end
+%}
 %% optimization problem
 pastdelay = 0;
 nbiter = 10;

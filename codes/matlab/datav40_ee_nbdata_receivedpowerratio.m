@@ -1,7 +1,7 @@
 %v16
 %last update: 14 june 2022
 
-% %energy efficiency of NOMA asynchronous D2D SIC decoding
+%energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
@@ -17,7 +17,7 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,10,10);%change here
+receive_pow_ratio_vec = linspace(0,10,10);%change here
 mpriority = 20;
 
 EEconv = zeros(mpriority,1);
@@ -67,7 +67,7 @@ for indx = 2:mpriority
     
 initialK = indx;
 K = indx;%number of superimposed data
-receive_pow_ratio = 5;
+receive_pow_ratio = 10;
 
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
