@@ -2,7 +2,7 @@
 %last update: 14 june 2022
 %goal: ANOMA D2D capacity analysis 
 
-% %energy efficiency of NOMA asynchronous D2D SIC decoding
+%energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
@@ -17,7 +17,7 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,10,20);%change here
+receive_pow_ratio_vec = linspace(0,10,20);%change here
 mpriority = 20;
 
 EEconv = zeros(mpriority,1);
@@ -260,10 +260,14 @@ cvx_begin quiet
    subject to
       var1 : -sum(decision_uk)+ sum(decision_uk.^2)<=0;
 
-      var2: decision_uk'*sumsym_dur_vec-1/(priority+0.001)*priority_max/timeslot <= 0
+      var2: decision_uk'*sumsym_dur_vec-1/(priority+0.001)...
+          *priority_max/timeslot <= 0
            
-      var3: decision_uk.*((noisepower^2 + interf_vec + power_vec(1:K).*mean(g_vec(1:K,:),2))...
-                -power_vec(1:K).*mean(g_vec(1:K,:),2)*(1+1/sinr_th)) <= 0  
+      var3: decision_uk.*((noisepower^2 + interf_vec +...
+          power_vec(1:K).*mean(g_vec(1:K,:),2))...
+                -power_vec(1:K).*mean(g_vec(1:K,:),2)*...
+                (1+1/sinr_th)) <= 0  
+            
       var4: decision_uk(1:K-1)>= decision_uk(2:K)     
 cvx_end
 
@@ -566,8 +570,7 @@ function [berfinal] = berfunc(power_vec, noise, nsym, user_strength,...
 
 for i = 1: length(user_strength)
 for j = 1: nsym(i)
-    if(j ==1 & i >3)
-        
+    if(j ==1 & i >3)       
         %fprintf('yea here %i\n',user_strength(i) >= 2 & j == 1 & i==length(user_strength))
     end
 if user_strength(i) == 1 & j == 1%A1
@@ -575,10 +578,9 @@ if user_strength(i) == 1 & j == 1%A1
     delta_i = delta_mat(user_strength(i+1),j);%known
     p_d     = power_vec(i); %desired power
     p_iw    = power_vec(i+1);%interferes power 
-    %disp('yea')
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
     (delta_i.*p_iw/2+noise))))).^2;
-    %fprintf('length(user_strength) %f\n',length(user_strength))  
+ 
     q   = integral(fun,timeoff_min,timeoff_max);
     if (length(user_strength)>2)
        delta_i = [delta_mat(user_strength(i+1),j);delta_mat(user_strength(i+2),j)];%known
@@ -600,8 +602,8 @@ elseif (user_strength(i) == 1 & j > 1)%A2.... An
     delta_i = [(0.5-delta_mat(user_strength(i+1),j-1)); ...
         delta_mat(user_strength(i+1),j)];
     p_d     = power_vec(i); %desired power
-    p_iw     = power_vec(i+1);%interferes power
-    power_v  = [p_iw/2;p_iw/2];
+    p_iw    = power_vec(i+1);%interferes power
+    power_v = [p_iw/2;p_iw/2];
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (sum(delta_i.*power_v)+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max);
@@ -683,7 +685,7 @@ elseif (user_strength(i) > 1 & j > 1 & i~=round(length(user_strength)))%B2.....B
     p_d     = power_vec(i); %desired power
     p_is    = power_vec(i-1);%interferes power
     p_iw    = power_vec(i+1);%interferes power
-    power_v  = [p_is/2;p_is/2;p_iw/2;p_iw/2];
+    power_v = [p_is/2;p_is/2;p_iw/2;p_iw/2];
     
     %change here %error vec1
     error_vec1 = [1;1;1;1];%one error one correct

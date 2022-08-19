@@ -1,6 +1,6 @@
 %date: 13 july 2022
 %goal: optimize the secrecy 
-close all
+%close all
 clc
 clear all
 
@@ -15,14 +15,12 @@ B            = 1;%channel bandwidth
 timeslot     = 1;
 N            = 10^3;
 
-
 transmit_snrdb_vec = linspace(1,100,20);
 total = length(transmit_snrdb_vec);
 t = 1;%sinr index 
 cs = zeros(total,1);
 for transmit_snrdb = transmit_snrdb_vec
   
-
 time_offset = 0.15;
 
 %Distances of users from rx
@@ -126,14 +124,14 @@ sinr_thmax = 1;
  
 cvx_begin quiet
    variable decision_uk
-   dual variables var3 var1
+   dual variables var1 var2 var3
    minimize(-decision_uk*abs(log((1+SINRd)/(1+SINRe))))%maximize secrecy
    subject to
-      (log(1+SINRd)-sinr_thmin)...
+      var1:(log(1+SINRd)-sinr_thmin)...
                  -(sinr_thmax-log(1+SINRe))      
-      var3: decision_uk*((log(1+SINRd)-sinr_thmin)...
+      var2: decision_uk*((log(1+SINRd)-sinr_thmin)...
                  -(sinr_thmax-log(1+SINRe)))>=0    
-      var1: decision_uk >=0  
+      var3: decision_uk >=0  
 cvx_end
 
 decision_uk = decision_uk>0.5
@@ -144,6 +142,7 @@ end
 
 %% performance analysis
 %secrecy capacity vs SINRd
+figure
 plot(transmit_snrdb_vec,cs,'r--')
 xlabel('SNR legitimate')
 ylabel('Secrecy capacity')
