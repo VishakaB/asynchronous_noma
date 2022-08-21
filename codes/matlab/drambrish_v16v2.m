@@ -3,6 +3,7 @@
 %for irc
 close all
 clc
+clear all
 
 %% initialization 
 K = 3;
@@ -24,7 +25,7 @@ alpha1_vec = [0.0001,0.001,0.1,0.5];
 alpha2_vec = [0.4,0.3,0.15,0.1];
 receive_pow_ratio_vec =linspace(0,10,4);%change here
 
-for cases = 2:4
+for cases = 1:4
 t = 1; 
 receive_pow_ratio = receive_pow_ratio_vec(2);%?
 for transmit_snrdb = transmit_snrdb_vec
@@ -172,22 +173,16 @@ C = {'k','b','r','g','y',[.5 .6 .7],[.8 .2 .6]}; % Cell array of colros.
 %secrecy capacity vs SINRd
 hold on;
 grid on;
-plot(transmit_snrdb_vec,smooth(smooth(smooth(cs(cases,:)))),...
-    'color',C{cases},'marker','o');
+plot(transmit_snrdb_vec,smooth(smooth(smooth(cs(cases,:)))),'color',C{cases},'marker','o');
 
 hold on;
-plot(transmit_snrdb_vec,smooth(smooth(smooth(wtcs(cases,:)))),...
-    'color',C{cases},'LineStyle','--');
+plot(transmit_snrdb_vec,smooth(smooth(smooth(wtcs(cases,:)))),'color',C{cases},'marker','*');
 xlabel('SNR legitimate');
 ylabel('Secrecy capacity');
 
 end
 
-legend({'Proposed with \alpha_{{e}_1} = 0.001';'Conventional with \alpha_{{e}_1} = 0.001';...
+legend({'opt \alpha_{{e}_1} = 0.001';'wt opt \alpha_{{e}_1} = 0.001';...
     'opt \alpha_{{e}_2} = 0.01';'wt opt \alpha_{{e}_2} = 0.01';...
     'opt \alpha_{{e}_3} = 0.1';'wt opt \alpha_{{e}_3} = 0.1';...
     'opt \alpha_{{e}_4} = 0.5';'wt opt \alpha_{{e}_4} = 0.5'});
-
-
-save cs.mat
-save wtcs.mat
