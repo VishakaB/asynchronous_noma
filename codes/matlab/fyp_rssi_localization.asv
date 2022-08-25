@@ -1,0 +1,6 @@
+
+figure (1)
+gridvon;
+plot(1:10,xy,'color','b','marker','o');
+xlabel('d_{gap} (m)');
+ylabel('Localization error (m)');
