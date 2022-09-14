@@ -16,7 +16,7 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,10,20);%change here
+receive_pow_ratio_vec = linspace(0,10,20);%change here
 mpriority = 20;
 
 EEconv = zeros(mpriority,1);

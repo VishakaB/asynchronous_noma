@@ -16,7 +16,7 @@ B            = 1;%channel bandwidth
 timeslot     = 1;
 N            = 10^3;
 
-transmit_snrdb_vec = linspace(1,200,20);
+transmit_snrdb_vec = linspace(1,100,20);%practical range is 0-100db
 total = length(transmit_snrdb_vec);
 t = 1;%sinr index 
 cs = zeros(K,total);

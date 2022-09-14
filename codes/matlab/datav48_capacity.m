@@ -7,6 +7,7 @@
 %on number of users in ...
 %proposed optimized sic traingle decoding method
 %testing complexity results: ber vs received power ratio
+
 clc;
 clear all;
 close all;
@@ -40,7 +41,6 @@ intermprop = zeros(mpriority,1);
 
 %% 
 N=10^4;   % Number of Bits
-
 communication_radius = 30;%change this 
 max_dist     = 100;%meters
 max_eta      = 15;
