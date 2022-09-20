@@ -2,23 +2,25 @@
 clc;
 close all;
 clear all;
-k1=5; %Rician factor %ref: https://www.researchgate.net/publication/263669548_Probability_Distribution_of_Rician_K-Factor_in_Urban_Suburban_and_Rural_Areas_Using_Real-World_Captured_Data
+
+k1=5;% Rician factor % ref: https://www.researchgate.net/publication/263669548_Probability_Distribution_of_Rician_K-Factor_in_Urban_Suburban_and_Rural_Areas_Using_Real-World_Captured_Data
 mean=sqrt(k1/(k1+1));% mean
-sigma=sqrt(1/(2*(k1+1)));%variance
+sigma=sqrt(1/(2*(k1+1)));% variance
 N=10^5;  % Number of Bits for data_user1
-d1 = 10; d2 = 500;    %Distances of users from base station (BS)
+d1 = 10; d2 = 500;    % Distances of users from base station (BS)
 d3 = 5;
-eta = 4;            %Path loss exponent
+eta = 4;            % Path loss exponent
 
 %% ------------------Hop 1------------------------------
 users=1;            % Number of Users
+
 %------------------Generation of Walsh code--------------------------------
-n =16;                               %Number of  Data Sub-Carriers
+n =16;                              %Number of  Data Sub-Carriers
 walsh=hadamard(n);              
 code1=walsh(2,:);                   %Taking 2nd row of walsh code for User1
 
 %------------------Generating data for User1-------------------------------                     
-data_user1 = rand(1,N)>0.5;          % Generation of data for user1
+data_user1 = rand(1,N)>0.5;         % Generation of data for user1
 data_user1bpsk = 2*data_user1-1;    % BPSK modulation 0 -> -1; 1 -> 0 
 
 %------------------Spreading & IFFT for User1------------------------------
@@ -36,12 +38,12 @@ tx_user1=transdata1;                % Transmitting data for user1
 %----------------------Adding data for Transmission of All User------------
 x=tx_user1;
 %----------------------Creating Rayleigh Channel---------------------------
-Taps=4;                                        % Number of Taps
-p1=1;                                       % Power of Tap1
+Taps=4;                                   % Number of Taps
+p1=1;                                     % Power of Tap1
 p2=1;                                     % Power of Tap2
 p3=1;                                     % Power of Tap3
 p4=1;
-gain1=sqrt(d1^-eta)*sqrt(p1/2)*[randn(1,N)*sigma+mean + j*randn(1,N)*sigma];   % Gain for Tap1
+gain1=sqrt(d1^-eta)*sqrt(p1/2)*[randn(1,N)*sigma+mean + j*randn(1,N)*sigma];% Gain for Tap1
 
 ch1=repmat(gain1,(n+3),1);     
 
@@ -101,7 +103,7 @@ ch33=repmat(gain3s,(n+3),1);
 ch44=repmat(gain4s,(n+3),1);
 data_channel2=x2.*ch11+x111.*ch22+x222.*ch33+x333.*ch44;  % Passing data through channel 
 %------------------------Addition of AWGN noise ---------------------------
-data_channel =data_channel1+ data_channel2;
+data_channel=data_channel1+ data_channel2;
 data_noise=data_channel(:);
 data_noise=reshape(data_noise,1,length(data_noise));
 noise = 1/sqrt(2)*[randn(1,length(data_noise)) + j*randn(1,length(data_noise))]; 

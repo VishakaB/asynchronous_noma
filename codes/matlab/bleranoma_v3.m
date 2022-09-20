@@ -1,12 +1,12 @@
 %ref:https://in.mathworks.com/matlabcentral/fileexchange/90366-ber-performance-of-awgn-rayleigh-and-rician-fading-channels?#functions_tab
-clc
+clc;
 clear all;
 close all;
+
 n=100000;%no_of_samples
 i=randi([0,1],1,n);%generates random integers 0's and 1's
 i1=2*i-1;%bpsk modulation  i.e, mapping 1's as 1 and 0's as -1
-%scatterplot(i1);
-%scatterplot of bpsk modulation scheme
+%scatterplot(i1);%scatterplot of bpsk modulation scheme
 %rayleigh fading channel
 a=randn(1,n);%generates samples of size 1xn which are gaussian distributed
 b=randn(1,n);%generates samples of size 1xn which are gaussian distributed
