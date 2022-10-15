@@ -1,5 +1,5 @@
 %v16
-%last update: 14 june 2022
+%last update: 14 June 2022
 %goal: ANOMA D2D capacity analysis 
 
 %energy efficiency of NOMA asynchronous D2D SIC decoding
@@ -143,7 +143,7 @@ power_vec = sort(transmitpow_k,'descend');
 power_vec(1) = max_tx_power;
 %receive_pow_ratio = receive_pow_ratio_vec(receive_pow_ratioi);
 %change here
-power_vec(1) =  10^(transmit_snrdb/10)*noisepower;
+power_vec(1) = 10^(transmit_snrdb/10)*noisepower;
 for d = 2: K
     power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
 end
@@ -165,7 +165,7 @@ sym_dur_vec = sort(symdur_k,'descend');%change here
 
 %fprintf('iteration count %f\n',i)
 %fprintf('K %i\n',K);
-while (alldatadecoded == false & K> 1) 
+while (alldatadecoded == false & K>1) 
 %fprintf('v %f\n',v)
 %nsymbols vector of each user: K vec #loop
 clear K_vec;
@@ -205,23 +205,21 @@ delta_mat = zeros(K,K);
 delta_mat(1,:) = zeros(K,1);
 delta_mat(2:K,:) = time_offset*ones(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
 
-reverse_delta_mat(K,:)  = zeros(K,1);
+reverse_delta_mat(K,:) = zeros(K,1);
 reverse_delta_mat(1:K-1,:) = time_offset*ones(K-1,K);%A1, A2
 
 for j = 1:K%interference vector loop
 for k = 1:K
     %interference vec %only from the next neighbor user
     if k ~= desired_id & k == desired_id+1 & desired_id == 1        
-        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))
-        
+        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))       
     elseif k ~= desired_id & k == desired_id+1 & desired_id > 1 & desired_id <K
         sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))+...
             sum(reverse_delta_mat(desired_id-1,:))
     elseif desired_id==K
-        sumsym_dur_vec(desired_id,1) = sum(reverse_delta_mat(desired_id-1,:)); 
-       
+        sumsym_dur_vec(desired_id,1) = sum(reverse_delta_mat(desired_id-1,:));      
     end
- desired_id = desired_id+1;
+    desired_id = desired_id+1;
 end
 end
 
@@ -292,7 +290,7 @@ clear K_vec;
 for k = 1:K
     K_vec(k,1) = length(opt_decision_uk)-(k-1);
 end
-
+ 
 %% ber analysis
 clear nsym;
 clear user_strength;
@@ -309,7 +307,7 @@ delta_mat = zeros(K,K);
 delta_mat(1,:) = zeros(K,1);
 delta_mat(2:K,:) = 0.5*rand(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
 
-reverse_delta_mat(K,:)  = zeros(K,1);
+reverse_delta_mat(K,:) = zeros(K,1);
 reverse_delta_mat(1:K-1,:) = 0.5*rand(K-1,K);%A1, A2
 
 mod_order = 4;
@@ -332,6 +330,7 @@ ber_propuserw(v) = berfinal0(K);
 ber_convuserw(v) = berfinalconv(K);
 ber_propuseri(v) = berfinal0(round(K/2)+1);
 ber_convuseri(v) = berfinalconv(round(K/2)+1);
+
 %% sim delay
 
 if(K>1)

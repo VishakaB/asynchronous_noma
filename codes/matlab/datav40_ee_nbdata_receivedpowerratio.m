@@ -4,9 +4,10 @@
 %energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
-%proposed optimized sic traingle decoding method
+%proposed optimized sic triangle decoding method
 %testing complexity results: ee vs nbdata, under different received power
 %ratios
+
 clc;
 clear all;
 close all;
@@ -33,10 +34,10 @@ j = zeros(mpriority,1);
 
 strongconv = zeros(mpriority,1);
 strongprop = zeros(mpriority,1);
-weakconv = zeros(mpriority,1);
-weakprop = zeros(mpriority,1);
 intermconv = zeros(mpriority,1);
 intermprop = zeros(mpriority,1);
+weakconv   = zeros(mpriority,1);
+weakprop   = zeros(mpriority,1);
 
 %% 
 N=10^4;   % Number of Bits
@@ -46,7 +47,7 @@ max_dist     = 100;%meters
 max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;

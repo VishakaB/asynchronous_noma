@@ -3,6 +3,7 @@ close all;
 clear all;
 alpha = 0.5;
 users=2;            % Number of Users
+
 %------------------Generation of Walsh code--------------------------------
 n =4;                               %Number of  Data Sub-Carriers
 walsh=hadamard(n);              
