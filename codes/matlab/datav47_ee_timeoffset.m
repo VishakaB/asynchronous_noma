@@ -16,8 +16,8 @@ close all;
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,10,20);%change here
-mpriority = 20;
+receive_pow_ratio_vec =linspace(1,10,10);%change here
+mpriority = 10;
 
 EEconv = zeros(mpriority,1);
 EEprop = zeros(mpriority,1);
@@ -45,7 +45,7 @@ max_dist     = 100;%meters
 max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;
@@ -61,14 +61,13 @@ timeslot     = 1;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 3;%number of superimposed data
-transmit_snrdb_vec  =linspace(10,20,20);
-timeoffset_vec = 0.01*linspace(1,15,mpriority);
+K = 5;%number of superimposed data
+transmit_snrdb_vec = linspace(10,20,20);
+timeoffset_vec = 0.01*linspace(1,50,mpriority);
 
 for indx = 1:length(timeoffset_vec)
     
-initialK = 10;
-K = 10;%number of superimposed data
+initialK = K;
 transmit_snrdb = 10;
 receive_pow_ratio = receive_pow_ratio_vec(indx);%????????
 time_offset = timeoffset_vec(indx);
@@ -84,8 +83,8 @@ strongconv;
 strongprop;
 intermconv;
 intermprop;
-weakconv
-weakprop
+weakconv;
+weakprop;
 EEconv;
 EEprop;
 
@@ -106,7 +105,7 @@ N,receive_pow_ratio_vec,receive_pow_ratio,time_offset,transmit_snrdb)
 sim_delay_prop = 0;
 sim_delay_conv = 0;
 nbiterations = 1;
-nbrandom_iterations = 3;
+nbrandom_iterations = 100;
 
 for receive_pow_ratioi = 1: 1%number of superimposed data loop
 alldatadecoded = false;
@@ -119,7 +118,7 @@ max_dist     = 100;%meters
 max_eta      = 10;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 timeslot     = 1;
 
@@ -223,6 +222,8 @@ for k = 1:K
  desired_id = desired_id+1;
 end
 end
+
+sumsym_dur_vec = tril(delta_mat);
 
 desired_id = 1;
 for j = 1:K%interference vector loop
@@ -356,14 +357,14 @@ end%end if
 
 %% throughput of each user
 %considering synchronous uplink noma
-E_max = 10;
+E_max = 10.8*100;%change here
 
-SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
+SINR_k = decision_uk(1:K).*power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 
-throughput_vec = log(1+SINR_k);
+%throughput_vec = 10^6*log(1+SINR_k);
 
-total_throughput = sum(throughput_vec);
-total_throughput = 2;%fix here????
+%total_throughput = sum(throughput_vec);
+total_throughput = 2*10^6;
 
 %% energy efficiency 
 %proposed optimal sic
@@ -371,7 +372,7 @@ for k = 1:length(decision_uk)
     K_vec(k,1) = length(decision_uk)-(k-1);
 end
 
-total_energ_consump = E_max - E_max^(exp(-log(2)/1000*decision_uk'*K_vec));
+total_energ_consump = (E_max - E_max^(exp(-log(2)/1000*decision_uk'*K_vec)));
 energy_eff(v) = total_throughput/(total_energ_consump +0.01);
 energy_eff;
 
@@ -530,10 +531,7 @@ function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] =...
                 grad_lam = -sum(decision_uk)...
                 + sum(decision_uk.^2);
                 %grad_mew = (decision_uk'*sym_dur_vec) - energyth ;
-                diff = -learn_rate*grad_lam;
-                
-                %diffmew = -learn_rate*grad_mew;
-                
+                diff = -learn_rate*grad_lam;               
                 if (abs(diff)<= tolerance)
                     converged_lam = lam;
                     nbiterationslam = nbiterationslam+1;

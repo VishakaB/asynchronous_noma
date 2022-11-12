@@ -10,7 +10,7 @@ clc;
 clear all;
 close all;
 
-%% input data: environmnet
+%% input data: environment
 %--------------------------------------------------------------------------
 %%scalars
 %number of users 
@@ -29,7 +29,7 @@ max_dist     = 100;%meters
 max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 20;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;
@@ -192,7 +192,7 @@ diff  = -learn_rate*grad_lam;
         %sumsym_dur_vec
         %disp('1');
         sumsym_dur_vec;
-        decision_uk>0.5;
+        decision_uk = round(decision_uk);
         %fprintf("K decision_uk %i %f\n",K,decision_uk);
         %fprintf("m i %f %f\n",m,i);
         if (isnan(decision_uk))
@@ -246,7 +246,6 @@ if K<=1
     %break;
 end%end if 
 end
-
 
 %% throughput of each user
 %considering synchronous uplink noma

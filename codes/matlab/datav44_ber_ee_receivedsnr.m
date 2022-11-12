@@ -1,11 +1,11 @@
 %v16
 %last update: 14 june 2022
 
-% %energy efficiency of NOMA asynchronous D2D SIC decoding
+%%energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
-%testing complexity results: ber vs received power ratio
+%testing complexity results: ber vs transmit snr 
 clc;
 clear all;
 close all;
@@ -61,13 +61,13 @@ timeslot     = 1;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 10;%number of superimposed data
+K = 3;%number of superimposed data
 transmit_snr = linspace(10,20,20);%in db 
 for indx = 1:length(transmit_snr)
     
 initialK = K;
 %receive_pow_ratio = receive_pow_ratio_vec(indx);
-receive_pow_ratio =5;
+receive_pow_ratio = 5;
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
 [EEconv(indx),EEprop(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
@@ -75,12 +75,12 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
     weakprop(indx),intermconv(indx),intermprop(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
     pr_vec(2),N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snr(indx));
-    strongconv
-    strongprop
+    strongconv;
+    strongprop;
     intermconv;
     intermprop;
-    weakconv
-    weakprop
+    weakconv;
+    weakprop;
     EEconv;
     EEprop;
 end 
@@ -110,7 +110,7 @@ max_dist     = 100;%meters
 max_eta      = 10;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 timeslot     = 1;
 
@@ -365,14 +365,14 @@ end%end if
 
 %% throughput of each user
 %considering synchronous uplink noma
-E_max = 10;
+E_max = 10.8*100;
 
 SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 
 throughput_vec = log(1+SINR_k);
 
 total_throughput = sum(throughput_vec);
-total_throughput = 2;%fix here????
+total_throughput = 2*10^6;%fix here????
 
 %% energy efficiency 
 %proposed optimal sic
@@ -520,7 +520,7 @@ function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] =...
         mew = 0.9;
     end
     
-    convergeduk = false;    
+    convergeduk  = false;    
     convergedlam = false;
     convergedmew = false;
     nbiterationslam = 1;
@@ -574,8 +574,7 @@ function [berfinal] = berfunc(power_vec, noise, nsym, user_strength,...
 
 for i = 1: length(user_strength)
 for j = 1: nsym(i)
-    if(j ==1 & i >3)
-        
+    if(j ==1 & i >3)       
         %fprintf('yea here %i\n',user_strength(i) >= 2 & j == 1 & i==length(user_strength))
     end
 if user_strength(i) == 1 & j == 1%A1
@@ -1241,7 +1240,6 @@ elseif (user_strength(i) > 2 & j > 1 & i==length(user_strength))
 
         p_bitb2 = avgperr2/log(mod_order); 
         ber_vec(i,j) = p_bitb2;
-
 else
     disp('oops conv')
 end

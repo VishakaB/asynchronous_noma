@@ -1,7 +1,7 @@
 %v16
 %last update: 14 june 2022
 
-% %energy efficiency of NOMA asynchronous D2D SIC decoding
+%energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
@@ -10,18 +10,20 @@ clc;
 clear all;
 close all;
 
+rng(0);
+
 %% input data: environmnet
 
 %--------------------------------------------------------------------------
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec =linspace(0,10,20);%change here
+receive_pow_ratio_vec = linspace(1,10,20);%change here
 mpriority = 20;
 
 EEconv = zeros(mpriority,1);
 EEprop = zeros(mpriority,1);
-z = zeros(mpriority,1);
+z  = zeros(mpriority,1);
 zz = zeros(mpriority,1);
 e = zeros(mpriority,1);
 f = zeros(mpriority,1);
@@ -39,51 +41,47 @@ intermprop = zeros(mpriority,1);
 
 %% 
 N=10^4;   % Number of Bits
-
 communication_radius = 30;%change this 
 max_dist     = 100;%meters
 max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 0.2;%change this
 B            = 1;%channel bandwidth
-
 pth          = max_tx_power.*communication_radius^-etath;
 h_th         = sqrt(communication_radius^-etath)*sqrt(pth/2)*(randn(1,N)+...
 1i*randn(1,N))/sqrt(2);
 g_th         = (abs(h_th)).^2;
-
 rate_th      = log2( 1 + sqrt(pth/2)*g_th/noisepower);
-
 eth          = 1;
 timeslot     = 1;
 
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 3;%number of superimposed data
-transmit_snrdb_vec  =linspace(10,20,20);
+transmit_snrdb_vec  = linspace(10,20,20);
 
-for indx = 1:length(transmit_snrdb_vec)
+for indx = 1:length(receive_pow_ratio_vec)
     
-initialK = K;
+initialK = 10;
+K = initialK;
 receive_pow_ratio = receive_pow_ratio_vec(indx);
-
-pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
+time_offset = 0.5;
 
 [EEconv(indx),EEprop(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
     h(indx),i(indx),j(indx),strongconv(indx),strongprop(indx),weakconv(indx),...
     weakprop(indx),intermconv(indx),intermprop(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
-    pr_vec(2),N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snrdb_vec(indx));
-    strongconv
-    strongprop
+    1,N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snrdb_vec(indx),time_offset);
+    strongconv;
+    strongprop;
     intermconv;
     intermprop;
-    weakconv
-    weakprop
+    weakconv;
+    weakprop;
     EEconv;
     EEprop;
+    
 end 
  
 save strongconv.mat;
@@ -96,7 +94,7 @@ save weakprop.mat;
 function [a,b,c,d,e,f,g,h,i,j,...
     strongconv,strongprop,weakconv,weakprop,intermconv,intermprop]...
     = seqsic(initialK,alldatadecoded,K,priority,...
-N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snrdb)
+N,receive_pow_ratio_vec,receive_pow_ratio,transmit_snrdb,time_offset)
 
 sim_delay_prop = 0;
 sim_delay_conv = 0;
@@ -108,13 +106,14 @@ alldatadecoded = false;
 fprintf('receive_pow_ratio %i\n',receive_pow_ratio);
 
 for i = 1:nbrandom_iterations %random iterations 
-v =1;
+    
+v = 1;
 K = initialK;
 max_dist     = 100;%meters
 max_eta      = 10;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 0.2;%change this
 B            = 1;%channel bandwidth
 timeslot     = 1;
 
@@ -137,7 +136,7 @@ power_vec = sort(transmitpow_k,'descend');
 power_vec(1) = max_tx_power;
 %receive_pow_ratio = receive_pow_ratio_vec(receive_pow_ratioi);
 %change here
-power_vec(1) =  10^(transmit_snrdb/10)*noisepower;
+%power_vec(1) =  10^(transmit_snrdb/10)*noisepower;
 for d = 2: K
     power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
 end
@@ -174,7 +173,6 @@ lambda1 = priority;%change this%energy saving priority %left energy is low
 learn_rate = 0.4;
 tolerance2 = 0.5;%lambda
 tolerance = 0.02;%uk
-Rmin = 1e-6;
 sinr_th = 1e-6;
 
 %--------------------------------------------------------------------------
@@ -197,27 +195,12 @@ clear reverse_delta_mat;
 %delta_mat: rows -> user index, columns-> symbol index %time offset with
 delta_mat = zeros(K,K);
 delta_mat(1,:) = zeros(K,1);
-delta_mat(2:K,:) = 0.1*ones(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
+delta_mat(1:K,:) = abs(time_offset*ones(K,K));%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
 
 reverse_delta_mat(K,:)  = zeros(K,1);
-reverse_delta_mat(1:K-1,:) = 0.1*ones(K-1,K);%A1, A2
+reverse_delta_mat(1:K,:) = abs(time_offset*ones(K,K));%A1, A2
 
-for j = 1:K%interference vector loop
-for k = 1:K
-    %interference vec %only from the next neighbor user
-    if k ~= desired_id & k == desired_id+1 & desired_id == 1        
-        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))
-        
-    elseif k ~= desired_id & k == desired_id+1 & desired_id > 1 & desired_id <K
-        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))+...
-            sum(reverse_delta_mat(desired_id-1,:))
-    elseif desired_id==K
-        sumsym_dur_vec(desired_id,1) = sum(reverse_delta_mat(desired_id-1,:)); 
-       
-    end
- desired_id = desired_id+1;
-end
-end
+sumsym_dur_vec = tril(delta_mat);
 
 desired_id = 1;
 for j = 1:K%interference vector loop
@@ -234,7 +217,7 @@ for k = 1:K%neighbor users index
 end
 desired_id = desired_id+1;
 end
-
+interf_vec;
 %% optimization problem
 pastdelay = 0;
 nbiter = 10;
@@ -264,7 +247,8 @@ cvx_end
 echo off
 %fprintf('cvx_slvtol %f\n',cvx_iterations);
 diary on;
-decision_uk = decision_uk>0.8;
+decision_uk = round(decision_uk);
+%= decision_uk>0.8;
 
 %complexity prop
 sic_complextiyprop(v) = sum(decision_uk)^2*log(1/tolerance)*log(1/tolerance);
@@ -345,20 +329,21 @@ else
     %fprintf('recalc sic %f\n',v)
     %break;
 end%end if 
-decision_uk ;
-K = K-sum(decision_uk);%update K
+
+decision_uk;
+
 end%end if 
 
 %% throughput of each user
 %considering synchronous uplink noma
-E_max = 10;
+E_max = 10.8*100;
 
 SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 
-throughput_vec = log(1+SINR_k);
+throughput_vec = 10^6*log(1+SINR_k);
 
-total_throughput = sum(throughput_vec);
-total_throughput = 2;%fix here????
+%total_throughput = sum(throughput_vec);
+total_throughput = 2*10^6;%fix here????
 
 %% energy efficiency 
 %proposed optimal sic

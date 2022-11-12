@@ -28,6 +28,7 @@ receive_pow_ratio_vec =linspace(0,10,4);%change here
 for cases = 1:4
 t = 1; 
 receive_pow_ratio = receive_pow_ratio_vec(2);%?
+
 for transmit_snrdb = transmit_snrdb_vec
   
 time_offset = 0.15;
@@ -85,13 +86,12 @@ delta_mat(2:K,:) = time_offset*ones(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,..
 reverse_delta_mat(K,:)  = zeros(K,1);
 reverse_delta_mat(1:K-1,:) = time_offset*ones(K-1,K);%A1, A2
 
-desired_id = 1;
+desired_id = 1;%initiation
 for j = 1:K%interference vector loop
-for k = 1:K
+for k = 1:K%interfering user
     %interference vec %only from the next neighbor user
     if k ~= desired_id & k == desired_id+1 & desired_id == 1        
-        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))
-        
+        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))       
     elseif k ~= desired_id & k == desired_id+1 & desired_id > 1 & desired_id <K
         sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))+...
             sum(reverse_delta_mat(desired_id-1,:))
@@ -101,6 +101,7 @@ for k = 1:K
  desired_id = desired_id+1;
 end
 end
+sumsym_dur_vec
 
 interf_vec = zeros(K,1);
 desired_id = 1;

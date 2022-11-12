@@ -12,13 +12,14 @@ clc;
 clear all;
 close all;
 
+rng(0);
 %% input data: environmnet
 
 %--------------------------------------------------------------------------
 %%scalars
 %number of users 
 alldatadecoded = false;
-receive_pow_ratio_vec = linspace(0,10,10);%change here
+receive_pow_ratio_vec = linspace(1,20,20);%change here
 mpriority = 20;
 
 EEconv = zeros(mpriority,1);
@@ -48,43 +49,42 @@ max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
 max_tx_power = 2;%change this
-B            = 1;%channel bandwidth
+B            = 1e6;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;
 h_th         = sqrt(communication_radius^-etath)*sqrt(pth/2)*(randn(1,N)+...
 1i*randn(1,N))/sqrt(2);
 g_th         = (abs(h_th)).^2;
-
-rate_th      = log2( 1 + sqrt(pth/2)*g_th/noisepower);
-
 eth          = 1;
 timeslot     = 1;
 
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
+timeoffset_vec = 0.01*linspace(1,50,mpriority);
 
-for indx = 2:mpriority
+for indx = 2:15
     
 initialK = indx;
 K = indx;%number of superimposed data
-receive_pow_ratio = 10;
-
+receive_pow_ratio = 1;
+time_offset = 0.15;
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
 [EEconv(indx),EEprop(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
     h(indx),i(indx),j(indx),strongconv(indx),strongprop(indx),weakconv(indx),...
     weakprop(indx),intermconv(indx),intermprop(indx)] =...
     seqsic(initialK,alldatadecoded,K,...
-    pr_vec(2),N,receive_pow_ratio_vec,receive_pow_ratio);
+    pr_vec(2),N,receive_pow_ratio_vec,receive_pow_ratio,time_offset);
     strongconv;
     strongprop;
     intermconv;
     intermprop;
     weakconv;
     weakprop;
-    EEconv
-    EEprop
+    EEconv;
+    EEprop;
+    
 end 
  
 save x.mat;
@@ -95,25 +95,25 @@ save zz.mat;
 function [a,b,c,d,e,f,g,h,i,j,...
     strongconv,strongprop,weakconv,weakprop,intermconv,intermprop]...
     = seqsic(initialK,alldatadecoded,K,priority,...
-N,receive_pow_ratio_vec,receive_pow_ratio)
+N,receive_pow_ratio_vec,receive_pow_ratio,time_offset)
 
 sim_delay_prop = 0;
 sim_delay_conv = 0;
 nbiterations = 1;
-nbrandom_iterations = 3;
+nbrandom_iterations = 10;
 
 for receive_pow_ratioi = 1: 1%number of superimposed data loop
 alldatadecoded = false;
-fprintf('receive_pow_ratio %i\n',receive_pow_ratio);
+fprintf('K %i\n',K);
 
 for i = 1:nbrandom_iterations %random iterations 
-v =1;
+v = 1;
 K = initialK;
 max_dist     = 100;%meters
 max_eta      = 10;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 timeslot     = 1;
 
@@ -195,28 +195,29 @@ clear reverse_delta_mat;
 %delta_mat: rows -> user index, columns-> symbol index %time offset with
 delta_mat = zeros(K,K);
 delta_mat(1,:) = zeros(K,1);
-delta_mat(2:K,:) = 0.5*rand(K-1,K);%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
+delta_mat(1:K,:) = abs(time_offset*ones(K,K));%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
 
 reverse_delta_mat(K,:)  = zeros(K,1);
-reverse_delta_mat(1:K-1,:) = 0.5*rand(K-1,K);%A1, A2
+reverse_delta_mat(1:K-1,:) = time_offset*ones(K-1,K);%A1, A2
 
+sumsym_dur_vec = tril(delta_mat);
+
+desired_id = 1;
 for j = 1:K%interference vector loop
-for k = 1:K
-    %interference vec %only from the next neighbor user
-    if k ~= desired_id & k == desired_id+1 & desired_id == 1        
-        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))
-        
-    elseif k ~= desired_id & k == desired_id+1 & desired_id > 1 & desired_id <K
-        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))+...
-            sum(reverse_delta_mat(desired_id-1,:))
-    elseif desired_id==K
-        sumsym_dur_vec(desired_id,1) = sum(reverse_delta_mat(desired_id-1,:)); 
-       
-    end
- desired_id = desired_id+1;
+for k = 1:K%neighbor users index
+     if k ~= desired_id  %strongest
+        interf_vec(desired_id) = interf_vec(desired_id)+sum(power_vec(k).*...
+            mean(g_vec(k,:),2).*delta_mat(desired_id,:));
+     elseif desired_id == 1
+        if(k<K)
+        interf_vec(desired_id) = sum(power_vec(k+1).*...
+            mean(g_vec(k+1,:),2).*delta_mat(desired_id+1,:));
+        end
+     end
 end
+desired_id = desired_id+1;
 end
-       
+
 %% optimization problem
 pastdelay = 0;
 nbiter = 10;
@@ -245,7 +246,7 @@ cvx_end
 echo off
 %fprintf('cvx_slvtol %f\n',cvx_iterations);
 diary on;
-decision_uk = decision_uk>0.8;
+decision_uk = round(decision_uk);
 
 %complexity prop
 sic_complextiyprop(v) = sum(decision_uk)^2*log(1/tolerance)*log(1/tolerance);
@@ -253,8 +254,6 @@ sic_complextiyprop(v) = sum(decision_uk)^2*log(1/tolerance)*log(1/tolerance);
 proptend(v)    = toc(proptstart(v));
 
 %complexity analysis
-%proptend(v) = toc(proptstart(v));
-
 random_iterations = 10;
 N=10^4;  
 
@@ -303,8 +302,8 @@ ber_propuserw(v) = berfinal0(K);
 ber_convuserw(v) = berfinalconv(K);
 ber_propuseri(v) = berfinal0(round(K/2)+1);
 ber_convuseri(v) = berfinalconv(round(K/2)+1);
-%% sim delay
 
+%% sim delay
 if(K>1)
     [sim_delay_prop(v),ber_prop(v)] = sim_delayfunc(K, h_vec(1:K,:), userdata_vec(1:K,:), random_iterations,K_vec);
 end
@@ -326,20 +325,19 @@ else
     %fprintf('recalc sic %f\n',v)
     %break;
 end%end if 
-decision_uk ;
+decision_uk;
 K = K-sum(decision_uk);%update K
 end%end if 
 
-
 %% throughput of each user
 %considering synchronous uplink noma
-E_max = 10;
+E_max = 10.8*100;
 
 SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 
 throughput_vec = log(1+SINR_k);
 
-total_throughput = sum(throughput_vec)+2;
+total_throughput = 10^6*2;
 
 %% energy efficiency 
 %proposed optimal sic

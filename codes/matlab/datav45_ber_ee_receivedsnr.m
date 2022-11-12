@@ -5,7 +5,7 @@
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method
-%testing complexity results: ber vs received power ratio
+%testing complity results: ber vs received power ratio
 clc;
 clear all;
 close all;
@@ -45,7 +45,7 @@ max_dist     = 100;%meters
 max_eta      = 15;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;
@@ -61,17 +61,17 @@ timeslot     = 1;
 %random iterations
 %--------------------------------------------------------------------------
 userK_vec = [3,5,8,15,20];
-K = 3;%number of superimposed data
-transmit_snrdb_vec  =linspace(10,20,20);
+K = 20;%number of superimposed data
+transmit_snrdb_vec = linspace(10,20,20);
 timeoffset_vec = 0.01*linspace(1,15,mpriority);
 
-for indx = 1:length(timeoffset_vec)
+for indx = 1:length(transmit_snrdb_vec)
     
-initialK = 10;
-K = 10;%number of superimposed data
-transmit_snrdb = 10;
+initialK = K;
+%K = 20;%number of superimposed data
+transmit_snrdb = transmit_snrdb_vec(indx);
 receive_pow_ratio = receive_pow_ratio_vec(indx);%????????
-time_offset = timeoffset_vec(indx);
+time_offset = 0.15;
 pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
 [EEconv(indx),EEprop(indx),z(indx),zz(indx),e(indx),f(indx),g(indx),...
@@ -82,10 +82,10 @@ pr_vec = [0.5;1;1.5;2;2.5;3;3.5;4;4.5;5;5.5;6;6.5;7.5;8;8.5;10;12;15;20];
 
 strongconv;
 strongprop;
-intermconv
-intermprop
-weakconv
-weakprop
+intermconv;
+intermprop;
+weakconv;
+weakprop;
 EEconv;
 EEprop;
 
@@ -110,7 +110,7 @@ nbrandom_iterations = 3;
 
 for receive_pow_ratioi = 1: 1%number of superimposed data loop
 alldatadecoded = false;
-fprintf('receive_pow_ratio %i\n',receive_pow_ratio);
+fprintf('transmit_snrdb %i\n',transmit_snrdb);
 
 for i = 1:nbrandom_iterations %random iterations 
 v =1;
@@ -119,7 +119,7 @@ max_dist     = 100;%meters
 max_eta      = 10;
 etath        = 4;%change this 
 noisepower   = 0.1;
-max_tx_power = 1000;%change this
+max_tx_power = 2;%change this
 B            = 1;%channel bandwidth
 timeslot     = 1;
 
@@ -215,14 +215,15 @@ for k = 1:K
         
     elseif k ~= desired_id & k == desired_id+1 & desired_id > 1 & desired_id <K
         sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id+1,:))+...
-            sum(reverse_delta_mat(desired_id-1,:))
+            sum(delta_mat(desired_id-1,:))
     elseif desired_id==K
-        sumsym_dur_vec(desired_id,1) = sum(reverse_delta_mat(desired_id-1,:)); 
+        sumsym_dur_vec(desired_id,1) = sum(delta_mat(desired_id-1,:)); 
        
     end
  desired_id = desired_id+1;
 end
 end
+sumsym_dur_vec = tril(delta_mat);
 
 desired_id = 1;
 for j = 1:K%interference vector loop
@@ -328,7 +329,6 @@ ber_convuserw(v) = berfinalconv(K);
 ber_propuseri(v) = berfinal0(round(K/2)+1);
 ber_convuseri(v) = berfinalconv(round(K/2)+1);
 %% sim delay
-
 if(K>1)
     [sim_delay_prop(v),ber_prop(v)] = sim_delayfunc(K, h_vec(1:K,:), userdata_vec(1:K,:), random_iterations,K_vec);
 end
@@ -356,14 +356,14 @@ end%end if
 
 %% throughput of each user
 %considering synchronous uplink noma
-E_max = 10;
+E_max = 10.8*100;
 
 SINR_k = power_vec(1:K).*mean(g_vec(1:K,:),2)./(interf_vec(1:K)+noisepower^2);
 
 throughput_vec = log(1+SINR_k);
 
 total_throughput = sum(throughput_vec);
-total_throughput = 2;%fix here????
+total_throughput = 10^6*2;
 
 %% energy efficiency 
 %proposed optimal sic
@@ -495,9 +495,12 @@ end
 %ber(i) = abs(mean(mean(est_sym - userdata_vec(:,1:3),2)));
 ber = 0;
 propend(i) = toc(proptstart(i));
+
 end
+
 sim_delay  = mean(propend);
 ber_mean = mean(ber);
+
 end
 
 function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] =...
@@ -531,9 +534,7 @@ function [convergedukfin,nbiterationslam,lam,nbiterationsuk,decision_uk] =...
                 + sum(decision_uk.^2);
                 %grad_mew = (decision_uk'*sym_dur_vec) - energyth ;
                 diff = -learn_rate*grad_lam;
-                
-                %diffmew = -learn_rate*grad_mew;
-                
+                                
                 if (abs(diff)<= tolerance)
                     converged_lam = lam;
                     nbiterationslam = nbiterationslam+1;
@@ -565,8 +566,7 @@ function [berfinal] = berfunc(power_vec, noise, nsym, user_strength,...
 
 for i = 1: length(user_strength)
 for j = 1: nsym(i)
-    if(j ==1 & i >3)
-        
+    if(j ==1 & i >3)       
         %fprintf('yea here %i\n',user_strength(i) >= 2 & j == 1 & i==length(user_strength))
     end
 if user_strength(i) == 1 & j == 1%A1
@@ -611,8 +611,8 @@ elseif (user_strength(i) == 1 & j > 1)%A2.... An
 elseif (user_strength(i) > 1 & j == 1 & i~=length(user_strength))%B1
     %inter -> A1, A2 and C1
     %disp('here0')
-    delta_i = [(reverse_delta_mat(user_strength(i-1),j));...
-        (0.5-reverse_delta_mat(user_strength(i-1),j+1)); ...
+    delta_i = [(delta_mat(user_strength(i-1),j));...
+        (0.5-delta_mat(user_strength(i-1),j+1)); ...
         delta_mat(user_strength(i+1),j);];
     detected_vec = [(6/(mod_order-1));(6/(mod_order-1));1;];
     p_d     = power_vec(i); %desired power
@@ -669,9 +669,9 @@ elseif (user_strength(i) > 1 & j > 1 & i~=round(length(user_strength)))%B2.....B
     delta_i = zeros(nbinterf,1);
     for h = 1: nbinterf
         if h == 1
-            delta_i(h) = (reverse_delta_mat(user_strength(i-1),j));
+            delta_i(h) = (delta_mat(user_strength(i-1),j));
         elseif h == 2
-            delta_i(h) = 0.5-reverse_delta_mat(user_strength(i-1),j+1);
+            delta_i(h) = 0.5-delta_mat(user_strength(i-1),j+1);
         elseif h == 3
             delta_i(h) = (0.5-delta_mat(user_strength(i+1),j-1));
         else
@@ -728,8 +728,8 @@ elseif (user_strength(i) > 1 & j > 1 & i~=round(length(user_strength)))%B2.....B
 elseif (user_strength(i) > 1 & j == 1 & i==round(length(user_strength)))
     %disp('here2 ')
     %interf-> B1 and B2
-    delta_i =[(reverse_delta_mat(user_strength(i-1),j)); ...
-        0.5-reverse_delta_mat(user_strength(i-1),j+1)];
+    delta_i =[(delta_mat(user_strength(i-1),j)); ...
+        0.5-delta_mat(user_strength(i-1),j+1)];
     detected_vec = [(6/(mod_order-1));(6/(mod_order-1))];
     p_d     = power_vec(i); %desired power
     p_is    = power_vec(i-1);%interferes power
@@ -778,11 +778,11 @@ elseif (user_strength(i) > 1 & j == 1 & i==round(length(user_strength)))
     
 elseif (user_strength(i) > 1 &j >1 & i==round(length(user_strength)))
     %interf-> B1 and B2,A1,A2,A3
-    delta_i =[(reverse_delta_mat(user_strength(i-2),j-1));...
-        (reverse_delta_mat(user_strength(i-2),j));...
-        (reverse_delta_mat(user_strength(i-2),j+1));
-        (reverse_delta_mat(user_strength(i-1),j)); ...
-        0.5-reverse_delta_mat(user_strength(i-1),j+1)];
+    delta_i =[(delta_mat(user_strength(i-2),j-1));...
+        (delta_mat(user_strength(i-2),j));...
+        (delta_mat(user_strength(i-2),j+1));
+        (delta_mat(user_strength(i-1),j)); ...
+        0.5-delta_mat(user_strength(i-1),j+1)];
     detected_vec = [(6/(mod_order-1));(6/(mod_order-1));(6/(mod_order-1));...
         (6/(mod_order-1));(6/(mod_order-1))];
     p_d     = power_vec(i); %desired power
@@ -791,8 +791,8 @@ elseif (user_strength(i) > 1 &j >1 & i==round(length(user_strength)))
     power_v  = [p_iss/2;p_iss/2;p_iss/2;p_is/2;p_is/2];
     
     %interf-> B1 and B2, A1, A2 and A3
-    delta_i =[(reverse_delta_mat(user_strength(i-1),j)); ...
-        0.5-reverse_delta_mat(user_strength(i-1),j+1)];
+    delta_i =[(delta_mat(user_strength(i-1),j)); ...
+        0.5-delta_mat(user_strength(i-1),j+1)];
     detected_vec = [(6/(mod_order-1));(6/(mod_order-1))];
     p_d     = power_vec(i); %desired power
     p_is    = power_vec(i-1);%interferes power

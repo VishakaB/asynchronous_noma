@@ -129,7 +129,7 @@ diff  = -learn_rate*grad_lam;
         kk=1;
         cvx_begin quiet
     
-            variable decision_uk(K,1) binary
+            variable decision_uk(K,1)
             
             %objective
             minimize(-decision_uk'*K_vec)
@@ -153,8 +153,8 @@ diff  = -learn_rate*grad_lam;
         cvx_end
         
         %sumsym_dur_vec
-        sumsym_dur_vec
-        decision_uk>0.5
+        sumsym_dur_vec;
+        decision_uk = round(decision_uk);
         fprintf("K decision_uk %i %f\n",K,decision_uk);
         fprintf("m i %f %f\n",m,i);
         if (isnan(decision_uk))
