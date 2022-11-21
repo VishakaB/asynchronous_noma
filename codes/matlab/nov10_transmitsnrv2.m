@@ -45,7 +45,7 @@ transmitpow_k = max_tx_power*abs(randn(K,1));
 %sorted transmit power vector %descending 
 power_vec = sort(transmitpow_k,'descend'); 
 
-power_vec(1) =  10^(transmit_snrdb/10)*noisepower;
+power_vec(1) =  10^(transmit_snrdb/10)*noisepower/10;
 %receive_pow_ratio = receive_pow_ratio_vec(receive_pow_ratioi);
 %change here
 for d = 2: K

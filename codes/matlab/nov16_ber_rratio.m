@@ -1,7 +1,5 @@
 clc;
 clear all;
-seed = 0;
-rng( seed )
 close all;
 %% ber vs total number of users
 % K = 5;
@@ -16,18 +14,19 @@ nbiter = 100;
 iter_K_vec1 = [4;2;2;2;10];
 iter_K_vec2 = [2;1;1;1;5];
 iter_K_vec3 = [5;4;3;3;15];
-iterKvec = [2,1,1,1,5;2,2,2,2,8;4,2,2,2,10;...
-    4,3,3,2,12;5,4,3,3,15];
+iterKvec = [2,1,1,1,5;2,2,2,2,8;4,2,2,2,10;4,3,3,2,12;5,4,3,3,15];
 kvec = [5,8,10,12,15];
 transmit_snrdb_vec = linspace(10,35,20);
+rratio_vec = linspace(1,5,20);
 
-for kindx = 1: size(iterKvec,1)
+for ratio = 1:length(rratio_vec)
 
 for j = 1:nbiter
 rng(j)%random seed
+
 for i = 1: length(iter_K_vec3)
-iter_K_vec = iterKvec(kindx,:);
-initialK = iter_K_vec(i);
+
+initialK = iter_K_vec1(i);
 K = initialK;
 n = K;    
 kopt_idx = 1;
@@ -50,9 +49,9 @@ if(K>0)
 
     %sorted transmit power vector %descending 
     power_vec = sort(transmitpow_k,'descend'); 
-    transmit_snrdb = 23;%%%%% change here
+    transmit_snrdb = 23;
     power_vec(1) =  10^(transmit_snrdb/10)*noisepower/10;
-    receive_pow_ratio = 2.263157895;
+    receive_pow_ratio = 2;
     %change here
     for d = 2: K
         power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
@@ -65,42 +64,42 @@ if(K>0)
 
     sumsym_dur_vec = tril(delta_mat);
 end
+if(K==initialK && length(power_vec)>1)
 
-if(K==initialK && length(power_vec)>1 && i< 5)
-
-    delta_1 = sumsym_dur_vec(1,1);%known
+%% strongest user
+    delta_i = sumsym_dur_vec(1,1);%known
     p_d     = power_vec(1); %desired power
-    p_iw    = power_vec(2:end);%interferes power 
+    p_iw    = power_vec(2);%interferes power 
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (sum(delta_1.*p_iw)/2+noise))))).^2;
+        (delta_i.*p_iw/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_1));
+    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_i));
     p_bita1_1    = p_err_sym1/log(mod_order);
 
-    delta_2 = sum(sumsym_dur_vec(1,1:initialK-1));%known
+    delta_i = sum(sumsym_dur_vec(1,1:initialK-1));%known
+    p_d     = power_vec(1); %desired power
+    p_iw    = power_vec(2);%interferes power 
+    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        (delta_i.*p_iw/2+noise))))).^2;
+    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
+    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_i));
+    p_bita1_2    = p_err_sym1/log(mod_order);
+
+    delta_i = sum(sumsym_dur_vec(1,1:initialK));%known
     p_d     = power_vec(1); %desired power
     p_iw    = power_vec(2:end);%interferes power 
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (sum(delta_2.*p_iw)/2+noise))))).^2;
+        (delta_i.*p_iw/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_2));
-    p_bita1_2    = p_err_sym1/log(mod_order);
-
-    delta_3 = sum(sumsym_dur_vec(1,1:initialK));%known
-    p_d     = power_vec(1); %desired power
-    p_iw    = power_vec(2:end);%interferes power 
-    fun = @(delta_3) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (sum(delta_3.*p_iw)/2+noise))))).^2;
-    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_3));
+    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_i));
     p_bita1_3    = p_err_sym1/log(mod_order);
 
-    ber_1(u) = 1/3*(p_bita1_1 + p_bita1_2 + p_bita1_3);
-    
+    ber_1(u) = 0.3*(p_bita1_1 + p_bita1_2 + p_bita1_3);
+
     %% second strongest user
     delta_i = sum(sumsym_dur_vec(2,1:initialK-1));%known
     p_d     = power_vec(round(initialK/2)); %desired power
-    p_iw    = power_vec(round(initialK/2)+1:end);%interferes power 
+    p_iw    = power_vec(round(initialK/2)+1);%interferes power 
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (delta_i.*p_iw/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
@@ -109,7 +108,7 @@ if(K==initialK && length(power_vec)>1 && i< 5)
 
     delta_i = sum(sumsym_dur_vec(2,1:initialK));%known
     p_d     = power_vec(round(initialK/2)); %desired power
-    p_iw    = power_vec(round(initialK/2)+1:end);%interferes power 
+    p_iw    = power_vec(round(initialK/2)+1);%interferes power 
     fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
         (delta_i.*p_iw/2+noise))))).^2;
     q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
@@ -117,6 +116,8 @@ if(K==initialK && length(power_vec)>1 && i< 5)
     p_bita2_2    = p_err_sym1/log(mod_order);
 
     ber_2(u) = 0.5*(p_bita2_1 + p_bita2_2);
+%     *[p_bita1_1*p_bita1_2*p_bita1_3 +...
+%      (1-p_bita1_1)*(1-p_bita1_2)*(1-p_bita1_3)];
 
     %% weakest user
     delta_w = [(sum(sumsym_dur_vec(end,1:initialK-1)))];%known
@@ -138,7 +139,6 @@ if(K==initialK && length(power_vec)>1 && i< 5)
     p_bita32    = pp_err_sym1/log(mod_order);
     
     ber_3(u) = 0.5*(p_bita31+p_bita32);
-    
 elseif K ==1
     snr  = power_vec(1)/noise;
     fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
@@ -183,49 +183,7 @@ if i == 5
     p_bita1_3    = p_err_sym1/log(mod_order);
 
     ber_1(u) = 1/3*(p_bita1_1 + p_bita1_2 + p_bita1_3);
-    %% second strongest user
-    delta_i = sum(sumsym_dur_vec(2,1:initialK-1));%known
-    p_d     = power_vec(round(initialK/2)); %desired power
-    p_iw    = power_vec(round(initialK/2)+1:end);%interferes power 
-    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (delta_i.*p_iw/2+noise))))).^2;
-    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_i));
-    p_bita2_1    = p_err_sym1/log(mod_order);
-
-    delta_i = sum(sumsym_dur_vec(2,1:initialK));%known
-    p_d     = power_vec(round(initialK/2)); %desired power
-    p_iw    = power_vec(round(initialK/2)+1:end);%interferes power 
-    fun = @(delta_i) (qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        (delta_i.*p_iw/2+noise))))).^2;
-    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    p_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_i));
-    p_bita2_2    = p_err_sym1/log(mod_order);
-
-    ber_2(u) = 0.5*(p_bita2_1 + p_bita2_2);
-%     *[p_bita1_1*p_bita1_2*p_bita1_3 +...
-%      (1-p_bita1_1)*(1-p_bita1_2)*(1-p_bita1_3)];
-
-    %% weakest user
-    delta_w = [(sum(sumsym_dur_vec(end,1:initialK-1)))];%known
-    p_d     = power_vec(end); %desired power
-    p_iw    = power_vec(length(power_vec)-2);   %interferes power 
-    fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        ((6/(mod_order -1))*sum(delta_i.*[p_iw;])/2+noise))))).^2;
-    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    pp_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_w));
-    p_bita31    = pp_err_sym1/log(mod_order);
     
-    delta_w = [sum(sumsym_dur_vec(end,1:initialK))];%known
-    p_d     = power_vec(end); %desired power
-    p_iw    = power_vec(length(power_vec)-1);  %interferes power 
-    fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
-        ((6/(mod_order -1))*sum(delta_i.*[p_iw;])/2+noise))))).^2;
-    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
-    pp_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_w));
-    p_bita32    = pp_err_sym1/log(mod_order);
-    
-    ber_3(u) = 0.5*(p_bita31+p_bita32);
 end
 
 if i ==1
@@ -257,48 +215,33 @@ user_far(j) = ber_3_end;
 user_conv_near(j) = ber_1_initial;
 user_conv_middle(j) = ber_2_initial;
 user_conv_far(j) = ber_3_initial;
-
 end
 
-propber_1(kindx)  = mean(avgavgavg_ber_1);
-propber_2(kindx)  = mean(avgavgavg_ber_2);
-propber_3(kindx)  = mean(avgavgavg_ber_3);
+propber_1(ratio)  = mean(avgavgavg_ber_1);
+propber_2(ratio)  = mean(avgavgavg_ber_2);
+propber_3(ratio)  = mean(avgavgavg_ber_3);
 
-user_1(kindx)  = mean(user_near);
-user_2(kindx)  = mean(user_middle);
-user_3(kindx)  = mean(user_far);
+user_1(ratio)  = mean(user_near);
+user_2(ratio)  = mean(user_middle);
+user_3(ratio)  = mean(user_far);
 
-user_1c(kindx)  = mean(user_conv_near);
-user_2c(kindx)  = mean(user_conv_middle);
-user_3c(kindx)  = mean(user_conv_far);
+user_1c(ratio)  = mean(user_conv_near);
+user_2c(ratio)  = mean(user_conv_middle);
+user_3c(ratio)  = mean(user_conv_far);
 
 end
 
 %each user BER vs received power ratio
 figure (1)
-semilogy(kvec,smooth(smooth(user_1)),'bo-','LineWidth',1)
+semilogy(rratio_vec,smooth(smooth(user_1)),'bo-','LineWidth',1)
 hold on 
-semilogy(kvec ,smooth(smooth(user_2)),'rs-','LineWidth',1)
+semilogy(rratio_vec,smooth(smooth(user_2)),'rs-','LineWidth',1)
 hold on
-semilogy(kvec ,smooth(smooth(user_3)),'k*-','LineWidth',1)
+semilogy(rratio_vec,smooth(smooth(user_3)),'k*-','LineWidth',1)
 hold on 
-semilogy(kvec ,smooth(smooth(user_1c)),'mo--','LineWidth',1)
+semilogy(rratio_vec,smooth(smooth(user_1c)),'mo--','LineWidth',1)
 hold on 
-semilogy(kvec ,smooth(smooth(user_2c)),'rs--','LineWidth',1)
+semilogy(rratio_vec,smooth(smooth(user_2c)),'rs--','LineWidth',1)
 hold on
-semilogy(kvec  ,smooth(smooth(user_3c)),'k*--','LineWidth',1)
+semilogy(rratio_vec,smooth(smooth(user_3c)),'k*--','LineWidth',1)
 grid on
-
-user1_ =  smooth(smooth(user_1));
-user2_ =  smooth(smooth(user_2));
-user3_ =  smooth(smooth(user_3));
-user_1c_ =  smooth(smooth(user_1c));
-user_2c_ =  smooth(smooth(user_2c));
-user_3c_ =  smooth(smooth(user_3c));
-
-save user1_.mat
-save user2_.mat
-save user3_.mat
-save user_1c_.mat
-save user_2c_.mat
-save user_3c_.mat

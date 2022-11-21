@@ -13,7 +13,7 @@ k_vec = linspace(1,15,15);
 u = 1;%initiate u
 nbiter = 100;
 iter_K_vec = [4;2;2;2;10];
-transmit_snrdb_vec = linspace(10,30,20);
+transmit_snrdb_vec = linspace(10,35,20);
 
 for transmit_snrdb = 1: length(transmit_snrdb_vec)
 
@@ -42,7 +42,7 @@ transmitpow_k = max_tx_power*abs(randn(K,1));
 %sorted transmit power vector %descending 
 power_vec = sort(transmitpow_k,'descend'); 
 
-power_vec(1) =  10^(transmit_snrdb/10)*noisepower/1000;
+power_vec(1) =  10^(transmit_snrdb/10)*noisepower/10;
 receive_pow_ratio = 2;
 %change here
 for d = 2: K

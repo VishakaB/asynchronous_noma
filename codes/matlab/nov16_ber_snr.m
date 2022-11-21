@@ -12,15 +12,20 @@ close all;
 k_vec = linspace(1,15,15);
 u = 1;%initiate u
 nbiter = 100;
-iter_K_vec = [4;2;2;2;10];
-transmit_snrdb_vec = linspace(0.01,2,20);
+iter_K_vec1 = [4;2;2;2;10];
+iter_K_vec2 = [2;1;1;1;5];
+iter_K_vec3 = [5;4;3;3;15];
+iterKvec = [2,1,1,1,5;2,2,2,2,8;4,2,2,2,10;4,3,3,2,12;5,4,3,3,15];
+kvec = [5,8,10,12,15];
+transmit_snrdb_vec = linspace(10,35,20);
 
-for transmit_snrdb = 1: length(transmit_snrdb_vec)
+for transmit_snrdb = 1: size(transmit_snrdb_vec,1)
 
 for j = 1:nbiter
 rng(j)%random seed
-for i = 1: length(iter_K_vec)
-initialK = iter_K_vec(i);
+for i = 1: length(iter_K_vec3)
+
+initialK = iter_K_vec1(i);
 K = initialK;
 n = K;    
 kopt_idx = 1;
@@ -35,55 +40,29 @@ max_tx_power = 2;
 % receive_pow_ratio = 0;
 noisepower = 0.1;
 time_offset = 0.5;
-%receive_pow_ratio = 5;
-% unsorted transmit power vector
-transmitpow_k = max_tx_power*abs(randn(K,1));
+if(K>0)
+    %receive_pow_ratio = 5;
+    % unsorted transmit power vector
+    transmitpow_k = max_tx_power*abs(randn(K,1));
 
-%sorted transmit power vector %descending 
-power_vec = sort(transmitpow_k,'descend'); 
+    %sorted transmit power vector %descending 
+    power_vec = sort(transmitpow_k,'descend'); 
+    transmit_snrdb = 23;
+    power_vec(1) =  10^(transmit_snrdb/10)*noisepower/10;
+    receive_pow_ratio = 2;
+    %change here
+    for d = 2: K
+        power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
+    end
+    clear delta_mat;
+    %time offsets between users 
+    %delta_mat: rows -> user index, columns-> symbol index %time offset with
+    delta_mat = zeros(K,K);
+    delta_mat(1:K,:) = abs(time_offset*randn(K,K));%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
 
-power_vec(1) =  10^(transmit_snrdb/10)*noisepower;
-receive_pow_ratio = 2;
-%change here
-for d = 2: K
-    power_vec(d) = power_vec(d-1)/10^(receive_pow_ratio);
+    sumsym_dur_vec = tril(delta_mat);
 end
-clear delta_mat;
-%time offsets between users 
-%delta_mat: rows -> user index, columns-> symbol index %time offset with
-delta_mat = zeros(K,K);
-delta_mat(1:K,:) = abs(time_offset*randn(K,K));%B1,... Bn, C1....,Cn, ....... %Z1,....Zn
-
-sumsym_dur_vec = tril(delta_mat);
-
-% Path loss exponent
-max_eta  = 10;
-max_dist = 100;
-noisepower = 0.1;
-eta_k   = max_eta*abs(randn(K,1));
-eta_vec = sort(eta_k,'ascend'); 
-eta_vec = 1.5;
-
-% Distances of users from rx
-dist_k = max_dist*abs(randn(K,1));
-
-% sorted transmit power vector %descending 
-dist_vec = sort(dist_k,'ascend'); 
-pathloss_exp = sqrt(dist_vec.^-eta_vec);
-
-%channel coefficients of each user vec
-h_vec =  pathloss_exp.*sqrt(power_vec(1:K)/2).*(randn(1,N)+1i*randn(1,N))/sqrt(2);
-g_vec = (abs(h_vec)).^2;%channel gains of each user vec
-interf_vec = sum(mean(1-g_vec(1:K,:),2).*sumsym_dur_vec,2);
-priority = 1;
-sinr_th = 1e-6;
-
-clear K_vec;
-for k = 1:K
-    K_vec(k,1) = K-(k-1);
-end
-
-if(K==initialK)
+if(K==initialK && length(power_vec)>1)
 
 %% strongest user
     delta_i = sumsym_dur_vec(1,1);%known
@@ -158,7 +137,18 @@ if(K==initialK)
     p_bita32    = pp_err_sym1/log(mod_order);
     
     ber_3(u) = 0.5*(p_bita31+p_bita32);
-
+elseif K ==1
+    snr  = power_vec(1)/noise;
+    fun = @(delta_i) (1-qfunc(sqrt(3*p_d./(2.*(mod_order-1).*...
+        ((6/(mod_order -1))*sum(noise)))))).^2;
+    q   = integral(fun,timeoff_min,timeoff_max,'ArrayValued', true);
+    pp_err_sym1 = (1/(timeoff_max - timeoff_min))*mean(q.*(delta_w));
+    p_bita32    = pp_err_sym1/log(mod_order);
+    ber_1 = p_bita32 ;
+elseif K==0
+    ber_1 = 0;
+    ber_2 = 0;
+    ber_3 = 0;
 end 
 
 if i == 5
@@ -239,24 +229,18 @@ user_3c(transmit_snrdb)  = mean(user_conv_far);
 
 end
 
-% figure (1)
-% semilogy(1:5,smooth(propber_1),'bo-','LineWidth',2)
-% hold on 
-% semilogy(1:5,smooth(propber_2),'rs-','LineWidth',2)
-% hold on
-% semilogy(1:5,smooth(propber_3),'k*-','LineWidth',2)
-
 %each user BER vs received power ratio
-figure (3)
-semilogy(transmit_snrdb_vec ,smooth(user_1),'bo-','LineWidth',1)
+figure (1)
+semilogy(kvec  ,smooth(smooth(user_1)),'bo-','LineWidth',1)
 hold on 
-semilogy(transmit_snrdb_vec ,smooth(user_2),'rs-','LineWidth',1)
+semilogy(kvec ,smooth(smooth(user_2)),'rs-','LineWidth',1)
 hold on
-semilogy(transmit_snrdb_vec ,smooth(user_3),'k*-','LineWidth',1)
+semilogy(kvec ,smooth(smooth(user_3)),'k*-','LineWidth',1)
 hold on 
-semilogy(transmit_snrdb_vec ,smooth(user_1c),'mo--','LineWidth',1)
+semilogy(kvec ,smooth(smooth(user_1c)),'mo--','LineWidth',1)
 hold on 
-semilogy(transmit_snrdb_vec ,smooth(user_2c),'rs--','LineWidth',1)
+semilogy(kvec ,smooth(smooth(user_2c)),'rs--','LineWidth',1)
 hold on
-semilogy(transmit_snrdb_vec ,smooth(user_3c),'k*--','LineWidth',1)
+semilogy(kvec  ,smooth(smooth(user_3c)),'k*--','LineWidth',1)
 grid on
+b
