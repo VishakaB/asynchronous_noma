@@ -15,7 +15,7 @@ close all;
 
 %% input data: environmnet
 N = 10^4;%total number of bits
-m = 200;%block length
+m = 200; %block length
 rc = N/m;%channel coding rate
 
 %transmission power
