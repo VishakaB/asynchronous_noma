@@ -1,7 +1,7 @@
 %v16
 %last update: 14 june 2022
 
-% %energy efficiency of NOMA asynchronous D2D SIC decoding
+%Energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
 %proposed optimized sic traingle decoding method

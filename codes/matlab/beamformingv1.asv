@@ -1,0 +1,16 @@
+%bemaforming vector
+N =3;%number of bits
+
+h1 = (randn(1,N) +1i*randn(1,N))/sqrt(2);
+h2 = (randn(1,N) +1i*randn(1,N))/sqrt(2);
+h3 = (randn(1,N) +1i*randn(1,N))/sqrt(2);
+
+Hm = [h1;h2;h3];
+PI = ones(3,3) - Hm.*inv((Hm)*conj(Hm')).*conj((Hm)');
+
+num1 = PI.*h1;
+den1 = norm(PI.*h1);
+
+wm = num1/den1
+
+conj(h1').*wj
