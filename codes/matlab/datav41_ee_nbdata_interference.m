@@ -1,10 +1,10 @@
 %v16
 %last update: 14 june 2022
 
-% %energy efficiency of NOMA asynchronous D2D SIC decoding
+%energy efficiency of NOMA asynchronous D2D SIC decoding
 %Output: Energy efficiency based ...
 %on number of users in ...
-%proposed optimized sic traingle decoding method
+%proposed optimized sic triangle decoding method
 %testing complexity results: ee vs nbdata, under different interference
 %constraints
 %ratios
@@ -51,8 +51,8 @@ max_tx_power = 1000;%change this
 B            = 1;%channel bandwidth
 
 pth          = max_tx_power.*communication_radius^-etath;
-h_th         = sqrt(communication_radius^-etath)*sqrt(pth/2)*(randn(1,N)+...
-1i*randn(1,N))/sqrt(2);
+h_th         = sqrt(communication_radius^-etath)*sqrt(pth/2)*sqrt(randn(1,N).^2+...
+1i*randn(1,N).^2)/sqrt(2);
 g_th         = (abs(h_th)).^2;
 
 rate_th      = log2( 1 + sqrt(pth/2)*g_th/noisepower);

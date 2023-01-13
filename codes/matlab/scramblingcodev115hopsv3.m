@@ -3,11 +3,11 @@ clc;
 close all;
 clear all;
 
-k1=5;% Rician factor % ref: https://www.researchgate.net/publication/263669548_Probability_Distribution_of_Rician_K-Factor_in_Urban_Suburban_and_Rural_Areas_Using_Real-World_Captured_Data
-mean=sqrt(k1/(k1+1));% mean
-sigma=sqrt(1/(2*(k1+1)));% variance
+k1 = 5;% Rician factor % ref: https://www.researchgate.net/publication/263669548_Probability_Distribution_of_Rician_K-Factor_in_Urban_Suburban_and_Rural_Areas_Using_Real-World_Captured_Data
+mean = sqrt(k1/(k1+1));% mean
+sigma = sqrt(1/(2*(k1+1)));% variance
 N=10;  % Number of Bits for data_user1
-d1 = 10; d2 = 500;  % Distances of users from base station (BS)
+d1 = 10;  d2 = 500;  % Distances of users from base station (BS)
 d3 = 5;
 eta = 4;            % Path loss exponent
 
@@ -69,6 +69,7 @@ tx_user2=transdata2;                % Transmitting data for user1
 
 %----------------------Adding data for Transmission of All User------------
 x2=tx_user2;
+
 %----------------------Creating Rayleigh Channel---------------------------
 Taps=4;                                        % Number of Taps
 %p1=1;                                       % Power of Tap1

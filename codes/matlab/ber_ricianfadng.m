@@ -73,7 +73,7 @@ for k=0:1:20
  op1=(z1>0); % threshold detection
     Berr(k+1)=sum(xor(op1,i))/n; % observed BER
     BerTr(k+1)=.5*erfc(sqrt(k1*snrl/(k1+snrl)));% theoretical BER
-    end;
+end
     %figure;
     k=0:1:20;
     semilogy(k,Berr(k+1),'-*');

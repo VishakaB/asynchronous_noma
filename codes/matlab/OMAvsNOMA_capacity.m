@@ -31,7 +31,7 @@ no = (10^-3)*db2pow(No);
 a1 = 0.75; a2 = 0.1825; a3 = 1-(a1+a2);
 
 C_noma = zeros(1,length(pt));
-C_oma = zeros(1,length(pt));
+C_oma  = zeros(1,length(pt));
 
 for u = 1:length(pt)
     
